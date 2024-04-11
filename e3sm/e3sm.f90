@@ -6,7 +6,7 @@ program e3sm
 
   call start_session() 
   
-  call sleep(10)
+  call sleep(5)
 
   call send_data_test()
 
@@ -14,8 +14,8 @@ program e3sm
 
   call recv_data_test()
 
-  call sleep(10)
+  call sleep(5)
 
-  ! call end_session()
+  call end_session()
 
 end program e3sm

@@ -4,7 +4,7 @@ module session_send_recv
 
   implicit none
 
-  character(len=256), parameter :: url = "http://128.55.151.66:8080"
+  character(len=256), parameter :: url = "http://128.55.151.56:8080"
   !character(len=256), parameter :: url = "http://130.20.117.240:8080"
 contains
 
@@ -73,6 +73,9 @@ contains
     character(len=256) :: session_id
     ! Variable identifiers for sending and receiving.
     integer :: var_send
+    ! periodically check if data is sent
+    integer :: counter, threshold
+    logical :: send_posted
 
     ! Check the status of all sessions.
     call get_all_session_statuses(trim(url))
@@ -88,11 +91,40 @@ contains
     allocate(arr_send(arr_length))
     arr_send = [(real(i, kind=c_double), i = 1, arr_length)]
     status_send = send_data_to_server(trim(url), trim(session_id), var_send, arr_send, arr_length)
-    if (status_send == 0) then
-        print *, "Data successfully sent."
-    else
-        print *, "Failed to send data."
+    !if (status_send == 0) then
+    !    print *, "Data successfully sent."
+    !else
+    !    print *, "Failed to send data."
+    !end if
+    
+    ! check if data is sent
+    counter = 0
+    threshold = 100
+    send_posted = .false.
+
+    ! Loop until data is received or counter exceeds the threshold
+    do while ( .not. send_posted .and. counter < threshold)
+       counter = counter + 1
+
+       ! check if data is send posted
+       if (status_send == 0) then
+          write (6,*) "Data successfully sent:", arr_send
+          send_posted = .true.
+       end if
+
+       if (.not. send_posted) then
+          write (6,*) "Data not received. Sleeping for 1 seconds..."
+          call sleep(1)
+       end if
+    end do
+
+    ! Check if data is not received
+    if (.not. send_posted) then
+       write (6,*) "Failed to send data."
+       STOP
     end if
+
+
     deallocate(arr_send)  ! Free the allocated memory for arr_send.
 
   end subroutine send_data_test
@@ -108,6 +140,9 @@ contains
     integer :: status_receive
     character(len=256) :: session_id
     integer :: var_receive
+    ! periodically check if data is received
+    integer :: counter, threshold
+    logical :: receive_posted
 
     ! Retrieve session flags.
     session_id = "2001_2005_35_36_1"
@@ -118,14 +153,45 @@ contains
     arr_length = get_variable_size_c(trim(url), trim(session_id), var_receive) 
     allocate(arr_receive(arr_length))
     status_receive = receive_data_from_server(trim(url), trim(session_id), var_receive, arr_receive, arr_length)
-    if (status_receive == 0) then
-        print *, "Data received successfully:"
-        do i = 1, arr_length
-            print *, "arr_receive(", i, ") = ", arr_receive(i)
-        end do
-    else
-        print *, "Failed to fetch data from server"
-    endif  
+    !if (status_receive == 0) then
+    !    print *, "Data received successfully:"
+    !    do i = 1, arr_length
+    !        print *, "arr_receive(", i, ") = ", arr_receive(i)
+    !    end do
+    !else
+    !    print *, "Failed to fetch data from server"
+    !endif  
+
+    ! check if data is sent
+    counter = 0
+    threshold = 100
+    receive_posted = .false.
+
+    ! Loop until data is received or counter exceeds the threshold
+    do while ( .not. receive_posted .and. counter < threshold)
+       counter = counter + 1
+
+       ! check if data is send posted
+       if (status_receive == 0) then
+          print *, "Data received successfully:"
+          do i = 1, arr_length
+             print *, "arr_receive(", i, ") = ", arr_receive(i)
+          end do
+          receive_posted = .true.
+       end if
+
+       if (.not. receive_posted) then
+          print *, "Data not received. Sleeping for 5 seconds..."
+          call sleep(5)
+       end if
+    end do
+
+    ! Check if data is not received
+    if (.not. receive_posted) then
+       print *, "Failed to fetch data from server"
+       STOP
+    end if
+
 
     ! Clean up...
     deallocate(arr_receive)

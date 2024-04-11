@@ -28,19 +28,21 @@ join_session(session_id)
 get_flags(session_id)
 
 # Pause for setup
+time.sleep(5) # 10 s does not work
+
+
+# Receive data
+var_receive_id = 1
+receive_data(session_id, var_receive_id)
+
 time.sleep(10)
+
 
 # Example data to send
 var_send_id = 4  # Placeholder variable ID
 data_array = list(range(300, 320))
 send_data(session_id, var_send_id, data_array)
 
-time.sleep(10)
-
-
-# Receive data
-var_receive_id = 1
-receive_data(session_id, var_receive_id)
 
 # Pause before ending session
 time.sleep(10)
