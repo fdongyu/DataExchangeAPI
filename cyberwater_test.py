@@ -1,39 +1,5 @@
 from cyberwater_library import *
-import time 
-
-# Function to check and send data with retry logic and feedback using specific flag
-def check_and_send_data(session_id, var_id, data_array, max_retries=5):
-    retry_count = 0
-    while retry_count < max_retries:
-        flag = get_variable_flag(session_id, var_id)
-        print ("------------------------------", flag, "------------------------------")
-        if flag == 0:
-            send_data(session_id, var_id, data_array)
-            return
-        else:
-            time.sleep(3)
-            print(f"---- Trying to send for the variable: {var_id} | retries: {retry_count}")
-            retry_count += 1
-    print(f"Failed to send data for var_id {var_id} after {max_retries} attempts: Flag is not in the expected state.")
-
-# Function to check and receive data with retry logic and feedback using specific flag
-def check_and_receive_data(session_id, var_id, max_retries=5):
-    retry_count = 0
-    while retry_count < max_retries:
-        flag = get_variable_flag(session_id, var_id)
-        print ("------------------------------", flag, "------------------------------")
-        if flag == 1:
-            receive_data(session_id, var_id)
-            return
-        else:
-            time.sleep(3)
-            print(f"---- Trying to receive for the variable: {var_id} | retries: {retry_count}")
-            retry_count += 1
-    print(f"Failed to receive data for var_id {var_id} after {max_retries} attempts: Flag is not in the expected state.")
-
-def array_to_string(int_array):
-    """Converts a list of integers to a comma-separated string."""
-    return ','.join(str(num) for num in int_array)
+import time
 
 # source_model_ID = 2001
 # destination_model_ID = 2005
