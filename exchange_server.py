@@ -53,14 +53,13 @@ session_lock = threading.Lock()
 @app.post("/create_session/{client_id}")
 async def create_session(client_id: str, session_data: SessionData):
     with session_lock:
-        # # Use data directly from session_data model
-        # base_session_id = f"{session_data.source_model_ID}_{session_data.destination_model_ID}_{session_data.initiator_id}_{session_data.inviter_id}"
-        # session_id = base_session_id + "_1"
-        # i = 1
-        # while session_id in sessions:
-        #     i += 1
-        #     session_id = f"{base_session_id}_{i}"
-        session_id = "2001,2005,35,36,0"
+        # Use data directly from session_data model
+        base_session_id = f"{session_data.source_model_ID},{session_data.destination_model_ID},{session_data.initiator_id},{session_data.inviter_id}"
+        session_id = base_session_id + ",1"
+        i = 1
+        while session_id in sessions:
+            i += 1
+            session_id = f"{base_session_id},{i}"
 
         var_sizes = {**dict(zip(session_data.input_variables_ID, session_data.input_variables_size)),
                      **dict(zip(session_data.output_variables_ID, session_data.output_variables_size))}
