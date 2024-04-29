@@ -1,42 +1,63 @@
 import requests
 import struct
+import time 
 
+# Constants
+SERVER_URL = "http://10.249.0.171:8080"
+CLIENT_ID = "ClientB"
 
-SERVER_URL = "http://10.249.0.171:8000"
+def create_session(source_model_ID, destination_model_ID, initiator_id, inviter_id,
+                   input_variables_ID=None, input_variables_size=None,
+                   output_variables_ID=None, output_variables_size=None):
+    """
+    Creates a session with specified parameters on the server.
 
-client_id  = "ClientB"
+    Parameters:
+        source_model_ID (int): ID of the source model.
+        destination_model_ID (int): ID of the destination model.
+        initiator_id (int): ID of the session initiator.
+        inviter_id (int): ID of the inviter.
+        input_variables_ID (list): Optional list of input variable IDs.
+        input_variables_size (list): Optional list of sizes for input variables.
+        output_variables_ID (list): Optional list of output variable IDs.
+        output_variables_size (list): Optional list of sizes for output variables.
 
-def create_session(source_model_ID, destination_model_ID, 
-                   initiator_id, 
-                   inviter_id,
-                   no_of_input_variables=0, input_variables_ID=[], input_variables_size=[], no_of_output_variables=0, output_variables_ID=[], output_variables_size=[]):
+    Returns:
+        dict: JSON response from the server or an error message.
+    """
+    # Prepare data for the POST request
     data = {
-        "client_id": client_id,
+        "client_id": CLIENT_ID,
         "source_model_ID": source_model_ID,
         "destination_model_ID": destination_model_ID,
-        "initiator_id": initiator_id,  # New field
-        "inviter_id": inviter_id,      # New field
-        "no_of_input_variables": no_of_input_variables,
-        "input_variables_ID": input_variables_ID,
-        "input_variables_size": input_variables_size,
-        "no_of_output_variables": no_of_output_variables,
-        "output_variables_ID": output_variables_ID,
-        "output_variables_size": output_variables_size
+        "initiator_id": initiator_id,
+        "inviter_id": inviter_id,
+        "input_variables_ID": input_variables_ID or [],
+        "input_variables_size": input_variables_size or [],
+        "output_variables_ID": output_variables_ID or [],
+        "output_variables_size": output_variables_size or []
     }
 
-    response = requests.post(f"{SERVER_URL}/create_session/{client_id}", json=data)
+    # Send POST request to the server
+    response = requests.post(f"{SERVER_URL}/create_session/{CLIENT_ID}", json=data)
+    
+    # Check response status
     if response.ok:
         session_info = response.json()
-        print(f"Session status: {session_info['status']}. Session ID: {session_info['session_id']}")
+        print(f"Session status: {session_info.get('status', 'unknown')}. Session ID: {session_info.get('session_id', 'N/A')}")
+        return session_info
     else:
         print("Error occurred:", response.text)
-    return response.json()
+        return {"error": response.text}
 
 def join_session(session_id):
-    data = {
-        "client_id": client_id,
-        "session_id": session_id,
-    }
+    """
+    Attempts to join a session with a given session ID.
+    
+    Parameters:
+        session_id (str): The ID of the session to join.
+    """
+    data = {"client_id": CLIENT_ID, "session_id": session_id}
     response = requests.post(f"{SERVER_URL}/join_session", json=data)
     if response.ok:
         print(f"Successfully joined session {session_id}")
@@ -44,6 +65,9 @@ def join_session(session_id):
         print("Error occurred while joining session:", response.text)
 
 def get_all_session_statuses():
+    """
+    Retrieves and prints the status of all sessions from the server.
+    """
     response = requests.get(f"{SERVER_URL}/list_sessions")
     if response.ok:
         sessions = response.json()
@@ -54,6 +78,12 @@ def get_all_session_statuses():
         print(f"Error occurred while retrieving session statuses: {response.text}")
 
 def get_flags(session_id):
+    """
+    Fetches and prints flags for a given session ID from the server.
+    
+    Parameters:
+        session_id (str): The ID of the session for which flags are being requested.
+    """
     response = requests.get(f"{SERVER_URL}/get_flags", params={"session_id": session_id})
     if response.ok:
         flags = response.json()
@@ -62,104 +92,173 @@ def get_flags(session_id):
         print("Error occurred while retrieving flags:", response.text)
 
 def get_variable_flag(session_id, var_id):
-    # Build the URL for the GET request
+    """
+    Retrieves the flag status for a specific variable within a session.
+
+    Parameters:
+        session_id (str): The ID of the session.
+        var_id (int): The ID of the variable.
+
+    Returns:
+        int: The flag status if the request is successful, None otherwise.
+    """
+    # Construct the URL and set parameters for the GET request
     url = f"{SERVER_URL}/get_variable_flag"
-    # Set the parameters with session_id and var_id
     params = {'session_id': session_id, 'var_id': var_id}
-    # Make the GET request
+
+    # Perform the GET request
     response = requests.get(url, params=params)
-    # Check if the response is successful
+
+    # Check if the request was successful
     if response.ok:
-        # Extract the flag status from the JSON response
+        # Parse and return the flag status from the JSON response
         flag_status = response.json().get('flag_status')
         print(f"Flag for session {session_id} variable {var_id}: {flag_status}")
         return flag_status
     else:
-        # Print the error message if something went wrong
+        # Log and return None if there was an error during the request
         print("Error occurred while retrieving flag status:", response.text)
         return None
 
 def send_data(session_id, var_id, data):
-    # Convert data (list of doubles) to binary
-    binary_data = struct.pack('<' + 'd'*len(data), *data)
+    """
+    Sends a list of double precision floats as binary data to the server for a specific session and variable.
 
+    Parameters:
+        session_id (str): The session ID to which the data belongs.
+        var_id (int): The identifier for the variable to which the data is related.
+        data (list of float): The data to be sent, represented as a list of doubles.
+
+    Note:
+        The data is packed in little-endian format.
+    """
+    # Convert the list of doubles into binary data using little-endian format
+    binary_data = struct.pack('<' + 'd' * len(data), *data)
+
+    # Prepare HTTP headers to include session and variable identifiers
     headers = {
         'Session-ID': session_id,
         'Var-ID': str(var_id)
     }
 
+    # Send the binary data as a POST request to the server
     response = requests.post(f"{SERVER_URL}/send_data", data=binary_data, headers=headers)
+    
+    # Check the response status and handle accordingly
     if response.ok:
-        print(f"Data sent for {var_id}.")
+        print(f"Data sent for variable ID {var_id} in session {session_id}.")
     else:
         print("Error sending data:", response.text)
 
 def receive_data(session_id, var_id):
+    """
+    Receives binary data from the server for a given session and variable ID, assuming the data
+    is a stream of double precision floats.
+
+    Parameters:
+        session_id (str): The session ID from which data is to be retrieved.
+        var_id (int): The variable ID associated with the data.
+    """
+    # Setup the query parameters for the GET request
     params = {"session_id": session_id, "var_id": var_id}
     response = requests.get(f"{SERVER_URL}/receive_data", params=params)
 
-    # Check if the response is JSON
-    if response.headers['Content-Type'] == 'application/json':
-        try:
-            data = response.json()
-            if 'error' in data:
-                print(f"Error: {data['error']}")
-            else:
-                print(f"Received JSON data: {data}")
-        except ValueError as e:
-            print(f"Error parsing JSON: {e}")
-    elif response.headers['Content-Type'] == 'application/octet-stream':
-        # Handle binary data
+    # Since the content type is always 'application/octet-stream', directly handle binary data
+    if response.ok:
         binary_data = response.content
-        # Assuming the binary data consists of a series of doubles
-        num_doubles = len(binary_data) // 8  # Each double is 8 bytes
-        unpacked_data = struct.unpack(f'<{num_doubles}d', binary_data)
-        print(f"Received binary data of length {len(binary_data)}")
+        num_doubles = len(binary_data) // 8  # Calculate the number of doubles (8 bytes each)
+        unpacked_data = struct.unpack(f'<{num_doubles}d', binary_data)  # Unpack binary data to doubles
+        print(f"Received binary data of length {num_doubles} ")
         print("Data array:", unpacked_data)
     else:
-        print("Received unexpected content type:", response.headers['Content-Type'])
+        print("Error retrieving data:", response.text)
     
 def end_session(session_id):
+    """
+    Ends a session on the server using a POST request with the session ID and client ID.
+    
+    Parameters:
+        session_id (str): The ID of the session to be ended.
+    """
+    # Prepare data payload for the POST request
     data = {
         "session_id": session_id,
-        "client_id": client_id
+        "client_id": CLIENT_ID
     }
+
+    # Send the POST request to end the session
     response = requests.post(f"{SERVER_URL}/end_session", json=data)
+
+    # Check if the request was successful
     if response.ok:
-        print(response.json().get("status"))
+        # Print the status message from the response
+        print(response.json().get("status", "No status message received."))
     else:
+        # Print an error message if the request failed
         print("Error ending session:", response.text)
 
-# Function to check and send data with retry logic and feedback using specific flag
-def check_and_send_data(session_id, var_id, data_array, max_retries=5):
+
+def check_and_send_data(session_id, var_id, data_array, max_retries=5, sleep_time=5):
+    """
+    Attempts to send data repeatedly until the server's flag allows for it or max retries are reached.
+
+    Parameters:
+        session_id (str): Session identifier.
+        var_id (int): Variable identifier associated with the data.
+        data_array (list): List of data points to send.
+        max_retries (int): Maximum number of retry attempts.
+        sleep_time (int): Time in seconds to wait between retries.
+
+    Prints feedback on sending attempts and success/failure status.
+    """
     retry_count = 0
     while retry_count < max_retries:
         flag = get_variable_flag(session_id, var_id)
-        print ("------------------------------", flag, "------------------------------")
-        if flag == 0:
+        if flag == 0:  # Check if the server is ready to receive the data
             send_data(session_id, var_id, data_array)
+            print("Data sent successfully.")
             return
         else:
-            time.sleep(3)
-            print(f"---- Trying to send for the variable: {var_id} | retries: {retry_count}")
+            time.sleep(sleep_time)
+            print(f"---- Trying to send for the variable: {var_id} | Retry: {retry_count}")
             retry_count += 1
+
     print(f"Failed to send data for var_id {var_id} after {max_retries} attempts: Flag is not in the expected state.")
 
-# Function to check and receive data with retry logic and feedback using specific flag
-def check_and_receive_data(session_id, var_id, max_retries=5):
+def check_and_receive_data(session_id, var_id, max_retries=5, sleep_time=5):
+    """
+    Attempts to receive data repeatedly until the server's flag allows for it or max retries are reached.
+
+    Parameters:
+        session_id (str): Session identifier.
+        var_id (int): Variable identifier for which data is expected.
+        max_retries (int): Maximum number of retry attempts.
+        sleep_time (int): Time in seconds to wait between retries.
+
+    Prints feedback on receiving attempts and success/failure status.
+    """
     retry_count = 0
     while retry_count < max_retries:
         flag = get_variable_flag(session_id, var_id)
-        print ("------------------------------", flag, "------------------------------")
-        if flag == 1:
+        if flag == 1:  # Check if the server has data available to receive
             receive_data(session_id, var_id)
+            print("Data received successfully.")
             return
         else:
-            time.sleep(3)
-            print(f"---- Trying to receive for the variable: {var_id} | retries: {retry_count}")
+            time.sleep(sleep_time)
+            print(f"---- Trying to receive for the variable: {var_id} | Retry: {retry_count}")
             retry_count += 1
+
     print(f"Failed to receive data for var_id {var_id} after {max_retries} attempts: Flag is not in the expected state.")
 
 def array_to_string(int_array):
-    """Converts a list of integers to a comma-separated string."""
+    """
+    Converts a list of integers to a comma-separated string.
+
+    Parameters:
+        int_array (list of int): List of integers to convert.
+
+    Returns:
+        str: Comma-separated string of integers.
+    """
     return ','.join(str(num) for num in int_array)
