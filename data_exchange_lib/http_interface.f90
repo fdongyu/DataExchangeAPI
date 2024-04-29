@@ -1,4 +1,4 @@
-module http_client_interface
+module http_interface
     use, intrinsic :: iso_c_binding, only: c_int, c_char, c_double
     implicit none
 
@@ -78,4 +78,4 @@ module http_client_interface
         end subroutine end_session_c
         
     end interface
-end module http_client_interface
+end module http_interface
