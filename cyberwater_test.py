@@ -31,6 +31,10 @@ def check_and_receive_data(session_id, var_id, max_retries=5):
             retry_count += 1
     print(f"Failed to receive data for var_id {var_id} after {max_retries} attempts: Flag is not in the expected state.")
 
+def array_to_string(int_array):
+    """Converts a list of integers to a comma-separated string."""
+    return ','.join(str(num) for num in int_array)
+
 # source_model_ID = 2001
 # destination_model_ID = 2005
 # initiator_id = 35
@@ -48,7 +52,8 @@ def check_and_receive_data(session_id, var_id, max_retries=5):
 # session_id = session_response.get('session_id')
 
 # Join session
-session_id = "2001,2005,35,36,0"
+session_id = [2001, 2005, 35, 36, 1]
+session_id = array_to_string(session_id)
 join_session(session_id)
 
 get_flags(session_id)
