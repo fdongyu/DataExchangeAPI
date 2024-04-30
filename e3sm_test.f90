@@ -49,6 +49,10 @@ contains
     output_variables_size = [20, 20, 20]
 
     ! Create a session with the server.
+
+    ! Todo: input_var_size parameter can be removed by using size(input_var).
+    ! Similarly, all the xxx_size paramters in all functions can be removed.
+
     call create_session_c(trim(url), source_model_ID, destination_model_ID, trim(client_id), &
                           initiator_id, inviter_id, input_variables_ID, input_variables_size, &
                           no_of_input_variables, output_variables_ID, output_variables_size, &
