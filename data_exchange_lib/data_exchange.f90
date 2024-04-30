@@ -89,9 +89,9 @@ contains
       max_retries = 5                                      ! Set maximum number of retries
       retries = 0                                          ! Initialize retry counter
 
-      ! Retrieve session and flag status
-      call get_all_session_statuses(trim(server_url))
-      call get_flags(trim(server_url), session_id)
+      ! Retrieve and print session and flag status
+      call print_all_session_statuses(trim(server_url))
+      call print_all_variable_flags(trim(server_url), session_id)
 
       ! Prepare data array
       arr_length = get_variable_size_c(trim(server_url), session_id, var_send)
@@ -142,15 +142,15 @@ contains
       integer :: flag                                           ! Flag to check status
       integer :: retries, max_retries                           ! Retry count and maximum retries allowed
       integer :: status_receive                                 ! Status of the receive operation
-      integer :: var_receive                                    ! Variable ID for receiving data
       integer :: sleep_time, base_sleep_time                    ! Sleep times between retries
 
       sleep_time = 5                                            ! Set sleep time
       max_retries = 10                                          ! Set maximum number of retries
       retries = 0                                               ! Initialize retry counter
 
-      ! Retrieve session flags
-      call get_flags(trim(server_url), session_id)
+      ! Retrieve and print session and flag status
+      call print_all_session_statuses(trim(server_url))
+      call print_all_variable_flags(trim(server_url), session_id)
 
       ! Determine the size of the data to be received and allocate memory
       arr_length = get_variable_size_c(trim(server_url), session_id, var_receive)
