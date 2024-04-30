@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
 /**
  * Function to create a session on the server by making a POST request with JSON data.
  * @param base_url Base URL of the server
@@ -161,7 +163,7 @@ size_t print_response_data(void *contents, size_t size, size_t nmemb, void *user
  * Function to make a GET request to retrieve all session statuses from the server.
  * @param base_url Base URL of the server
  */
-void get_all_session_statuses(const char* base_url) {
+void print_all_session_statuses(const char* base_url) {
     CURL *curl;  // CURL handle
     CURLcode res;  // Result of CURL operations
     char full_url[2048];  // Buffer to store the full URL
@@ -259,7 +261,7 @@ size_t write_callback_flags(void *contents, size_t size, size_t nmemb, void *use
  * @param base_url Base URL of the API.
  * @param session_id Array of integers representing session IDs.
  */
-void get_flags(const char* base_url, const int session_id[]) {
+void print_all_variable_flags(const char* base_url, const int session_id[]) {
     CURL *curl;  // CURL handle
     CURLcode res;  // CURL operation result
     char full_url[2048];  // Buffer to store the constructed URL
