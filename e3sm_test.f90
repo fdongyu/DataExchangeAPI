@@ -20,7 +20,7 @@ program e3sm_test
 
     ! write the session_ID for whole program
     id = [2001, 2005, 35, 36, 1]
-    ! call set_session_id(id)
+    call set_session_id(id)
 
     call set_var_send(1)  ! Setting variable ID for sending data
     call set_var_receive(4)  ! Setting variable ID for receiving data
