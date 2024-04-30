@@ -85,7 +85,34 @@ python cyberwater_test.py
 
 This will initiate or join a session and start the data exchange process.
 
+## Testing the E3SM Client
+Follow these steps on a different remote machine intended as the E3SM client:
 
+1. Ensure the `data_exchange_lib` directory contains `http_impl.c`, `http_interface.f90`, and `data_exchange.f90`.
+2. The parent directory should contain `e3sm_test.f90` and the Makefile.
 
+Compile the E3SM client code with the following commands:
+```bash
+make clean
+make
+```
+After compilation, run the E3SM client:
+```bash
+./e3sm_test
+```
+This will execute the compiled binary and engage in the data exchange process with the server and the Cyberwater client.
+
+## Session Management
+Both clients will interact with the data exchange server, which handles sessions, flags, and data transmission. Use the following endpoints to manage and monitor sessions:
+
+- `/create_session/{client_id}`: Initiates a new session.
+- `/join_session`: Joins an existing session.
+- `/list_sessions`: Lists all current sessions and their statuses.
+- `/get_flags`: Retrieves the flag status of all variables in a session.
+- `/get_variable_flag`: Gets the flag status for a specific variable.
+- `/get_variable_size`: Fetches the size of a specific variable.
+- `/send_data`: Sends binary data for a specific variable.
+- `/receive_data`: Receives binary data for a specific variable.
+- `/end_session`: Ends a session.
 
 
