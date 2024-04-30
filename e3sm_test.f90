@@ -59,6 +59,7 @@ contains
 
   !===============================================================================
 
+  ! This function needs to be in data_exchange.f90
   subroutine join_session()
       use http_interface               
       use iso_c_binding, only: c_int    
@@ -77,6 +78,7 @@ contains
 
   !===============================================================================
 
+  ! This function needs to be in data_exchange.f90 (similar one but not for testing).
   subroutine send_data_test()
       use http_interface           
       use iso_c_binding, only: c_double 
@@ -141,6 +143,7 @@ contains
   end subroutine send_data_test
   !===============================================================================
 
+  ! This function needs to be in data_exchange.f90 (similar one but not for testing purpose).
   subroutine recv_data_test()
       use http_interface              
       use iso_c_binding, only: c_double  
@@ -206,6 +209,7 @@ contains
   end subroutine recv_data_test
 
   !===============================================================================
+  ! This function needs to be in data_exchange.f90
 
   subroutine end_session()
       use http_interface                  ! Include module for HTTP interface methods
