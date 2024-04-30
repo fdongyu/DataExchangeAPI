@@ -50,8 +50,8 @@ contains
 
     ! Create a session with the server.
 
-    ! Todo: input_var_size parameter can be removed by using size(input_var).
-    ! Similarly, all the xxx_size paramters in all functions can be removed.
+    ! Todo: when providing a fortran API, the input_var_size parameter can be removed by using size(input_var).
+    ! Similarly, all the xxx_size paramters can be avoided in the fortran API.
 
     call create_session_c(trim(url), source_model_ID, destination_model_ID, trim(client_id), &
                           initiator_id, inviter_id, input_variables_ID, input_variables_size, &
