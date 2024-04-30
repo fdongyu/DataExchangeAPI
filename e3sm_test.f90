@@ -9,6 +9,7 @@ module data_exchange_test
 
 contains
 
+ ! This function needs to be in data_exchange.f90
   subroutine start_session()
 
     implicit none
