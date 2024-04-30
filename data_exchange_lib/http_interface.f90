@@ -27,18 +27,18 @@ module http_interface
             integer(c_int), intent(in) :: session_id(*)
         end subroutine join_session_c
 
-        ! Retrieves the status of all sessions from the server
-        subroutine get_all_session_statuses(url) bind(C)
+        ! Retrieves and print the status of all sessions from the server
+        subroutine print_all_session_statuses(url) bind(C)
             import :: c_char
             character(kind=c_char), intent(in) :: url(*)
-        end subroutine get_all_session_statuses
+        end subroutine print_all_session_statuses
 
-        ! Retrieves flag status for a given session
-        subroutine get_flags(base_url, session_id) bind(C)
+        ! Retrieves and print flag status for a given session
+        subroutine print_all_variable_flags(base_url, session_id) bind(C)
             import :: c_char, c_int
             character(kind=c_char), intent(in) :: base_url(*)
             integer(c_int), intent(in) :: session_id(*)
-        end subroutine get_flags
+        end subroutine print_all_variable_flags
 
         ! Gets the size of a variable from the server
         function get_variable_size_c(base_url, session_id, var_id) bind(C)
