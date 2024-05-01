@@ -20,7 +20,7 @@
  * @param output_variables_size Array of sizes corresponding to output variables
  * @param no_of_output_variables Number of output variables
  */
-void create_session_c(const char* base_url, int source_model_ID, int destination_model_ID, 
+void create_session(const char* base_url, int source_model_ID, int destination_model_ID, 
                       const char* client_id, int initiator_id, int inviter_id,
                       int* input_variables_ID, int* input_variables_size, 
                       int no_of_input_variables, int* output_variables_ID, int* output_variables_size, 
@@ -169,7 +169,7 @@ void print_all_session_statuses(const char* base_url) {
     char full_url[2048];  // Buffer to store the full URL
 
     // Construct the full URL for retrieving session statuses
-    snprintf(full_url, sizeof(full_url), "%s/list_sessions", base_url);
+    snprintf(full_url, sizeof(full_url), "%s/print_all_session_statuses", base_url);
 
     // Initialize CURL
     curl_global_init(CURL_GLOBAL_ALL);
@@ -215,34 +215,6 @@ void format_session_id_query(char *output, const int session_id[]) {
 }
 
 /**
- * Formats a series of session IDs into a header string suitable for HTTP headers.
- * Assumes that the session_id array always contains exactly 5 elements.
- * 
- * @param sessionHeader Pointer to a string where the resulting session ID header will be stored.
- * @param session_id Array of integers representing session IDs.
- */
-void format_session_id_query_header(char *sessionHeader, const int session_id[]) {
-    // Initialize the sessionHeader string with the header field name
-    strcpy(sessionHeader, "Session-ID: ");
-
-    // Iterate over the session IDs and format them into the sessionHeader string
-    for (int i = 0; i < 5; ++i) {
-        char temp[10]; // Smaller buffer suitable for individual session IDs
-
-        // Format the current session ID as a string and store it in temp
-        snprintf(temp, sizeof(temp), "%d", session_id[i]);
-
-        // Append the formatted session ID to the sessionHeader
-        strcat(sessionHeader, temp);
-
-        // Add a comma separator between session IDs, unless it's the last one
-        if (i < 4) {
-            strcat(sessionHeader, ",");
-        }
-    }
-}
-
-/**
  * Callback function for handling data received from CURL operations. It prints the data to standard output.
  * @param contents Pointer to the data received.
  * @param size Size of one data element.
@@ -250,7 +222,7 @@ void format_session_id_query_header(char *sessionHeader, const int session_id[])
  * @param userp User pointer (unused).
  * @return The number of bytes processed, which should match the number received to signify success.
  */
-size_t write_callback_flags(void *contents, size_t size, size_t nmemb, void *userp) {
+size_t print_all_variable_flags_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t real_size = size * nmemb;  // Calculate the total size of data received
     printf("%s", (char*)contents);  // Print the received data to stdout
     return real_size;  // Return the total size processed
@@ -271,7 +243,7 @@ void print_all_variable_flags(const char* base_url, const int session_id[]) {
     format_session_id_query(query_param, session_id);
 
     // Construct the full URL by appending the session_id query string to the base URL
-    snprintf(full_url, sizeof(full_url), "%s/get_flags?%s", base_url, query_param);
+    snprintf(full_url, sizeof(full_url), "%s/print_all_variable_flags?%s", base_url, query_param);
 
     // Initialize CURL
     curl_global_init(CURL_GLOBAL_ALL);
@@ -279,7 +251,7 @@ void print_all_variable_flags(const char* base_url, const int session_id[]) {
     if (curl) {
         // Set CURL options for the GET request
         curl_easy_setopt(curl, CURLOPT_URL, full_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback_flags);  // Set the callback function to print the response
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, print_all_variable_flags_callback);  // Set the callback function to print the response
 
         // Execute the GET request
         res = curl_easy_perform(curl);
@@ -327,7 +299,7 @@ static size_t get_variable_flag_callback(void *contents, size_t size, size_t nme
  * @param var_id Variable ID whose flag status is to be retrieved.
  * @return The flag status as an integer (-1 on error, otherwise the actual flag status).
  */
-int get_variable_flag_c(const char* base_url, const int session_id[], int var_id) {
+int get_variable_flag(const char* base_url, const int session_id[], int var_id) {
     CURL *curl;
     CURLcode res;
     char url[512];
@@ -371,7 +343,7 @@ int get_variable_flag_c(const char* base_url, const int session_id[], int var_id
  * @param userdata Pointer to an integer where the size will be stored.
  * @return The total number of bytes processed.
  */
-size_t variable_size_callback(char* ptr, size_t size, size_t nmemb, void* userdata) {
+size_t get_variable_size_callback(char* ptr, size_t size, size_t nmemb, void* userdata) {
     size_t real_size = size * nmemb;  // Calculate total data size
     char* found = strstr(ptr, "\"size\":");  // Search for the "size" key in the response
     if (found) {
@@ -389,7 +361,7 @@ size_t variable_size_callback(char* ptr, size_t size, size_t nmemb, void* userda
  * @param var_id The variable ID whose size is to be fetched.
  * @return The size of the variable as an integer. Returns -1 if an error occurs or the size is not found.
  */
-int get_variable_size_c(const char* base_url, const int session_id[], int var_id) {
+int get_variable_size(const char* base_url, const int session_id[], int var_id) {
     CURL *curl;
     CURLcode res;
     char full_url[2048];
@@ -407,7 +379,7 @@ int get_variable_size_c(const char* base_url, const int session_id[], int var_id
     if (curl) {
         // Set CURL options for the GET request
         curl_easy_setopt(curl, CURLOPT_URL, full_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, variable_size_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, get_variable_size_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &size);
 
         // Execute the GET request and handle errors
@@ -424,8 +396,33 @@ int get_variable_size_c(const char* base_url, const int session_id[], int var_id
     return size;  // Return the size of the variable, or -1 if there was an error
 }
 
-#include <curl/curl.h>
-#include <stdio.h>
+/**
+ * Formats a series of session IDs into a header string suitable for HTTP headers.
+ * Assumes that the session_id array always contains exactly 5 elements.
+ * 
+ * @param sessionHeader Pointer to a string where the resulting session ID header will be stored.
+ * @param session_id Array of integers representing session IDs.
+ */
+void format_session_id_query_header(char *sessionHeader, const int session_id[]) {
+    // Initialize the sessionHeader string with the header field name
+    strcpy(sessionHeader, "Session-ID: ");
+
+    // Iterate over the session IDs and format them into the sessionHeader string
+    for (int i = 0; i < 5; ++i) {
+        char temp[10]; // Smaller buffer suitable for individual session IDs
+
+        // Format the current session ID as a string and store it in temp
+        snprintf(temp, sizeof(temp), "%d", session_id[i]);
+
+        // Append the formatted session ID to the sessionHeader
+        strcat(sessionHeader, temp);
+
+        // Add a comma separator between session IDs, unless it's the last one
+        if (i < 4) {
+            strcat(sessionHeader, ",");
+        }
+    }
+}
 
 /**
  * Sends data to the server using HTTP POST.
@@ -438,7 +435,7 @@ int get_variable_size_c(const char* base_url, const int session_id[], int var_id
  * @param n Number of elements in the array.
  * @return Returns 1 on success, 0 on failure, and -1 if CURL initialization fails.
  */
-int send_data_to_server(const char* base_url, const int session_id[], int var_id, const double* arr, int n) {
+int send_data(const char* base_url, const int session_id[], int var_id, const double* arr, int n) {
     CURL *curl;
     CURLcode res;
     struct curl_slist *headers = NULL;
@@ -487,11 +484,6 @@ int send_data_to_server(const char* base_url, const int session_id[], int var_id
     return 1; // Return 1 on success, 0 on failure
 }
 
-#include <curl/curl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 /**
  * Structure to hold the data received from the server.
  */
@@ -510,7 +502,7 @@ struct MemoryStruct {
  * @param userp User-provided pointer to MemoryStruct to store received data.
  * @return The total number of bytes processed, or 0 on memory allocation failure.
  */
-static size_t write_callback1(void *contents, size_t size, size_t nmemb, void *userp) {
+static size_t receive_data_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t real_size = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
@@ -537,7 +529,7 @@ static size_t write_callback1(void *contents, size_t size, size_t nmemb, void *u
  * @param n Number of doubles expected to be received.
  * @return 1 on successful reception and correct data size, 0 otherwise.
  */
-int receive_data_from_server(const char* base_url, const int session_id[], int var_id, double* arr, int n) {
+int receive_data(const char* base_url, const int session_id[], int var_id, double* arr, int n) {
     CURL *curl;
     CURLcode res;
     struct MemoryStruct chunk;
@@ -562,7 +554,7 @@ int receive_data_from_server(const char* base_url, const int session_id[], int v
     curl = curl_easy_init();
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, full_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback1);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, receive_data_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 
@@ -599,7 +591,7 @@ int receive_data_from_server(const char* base_url, const int session_id[], int v
  * @param session_id Array containing session identifiers.
  * @param client_id Client identifier.
  */
-void end_session_c(const char* base_url, const int session_id[], const char* client_id) {
+void end_session(const char* base_url, const int session_id[], const char* client_id) {
     CURL *curl;
     CURLcode res;
     char full_url[2048];
