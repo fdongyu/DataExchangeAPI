@@ -37,8 +37,11 @@ session_id_list = [2001, 2005, 35, 36, 1]
 session_id = array_to_string(session_id_list)
 join_session(session_id)
 
+# Fetch and print the flags for the all sessions
+print_all_session_statuses()
+
 # Fetch and print the flags for the session
-get_flags(session_id)
+print_all_variable_flags(session_id)
 
 # Sleep
 print("------ Sleeping for 10 seconds ------")
@@ -46,6 +49,7 @@ time.sleep(10)
 
 # Prepare example data to send
 var_send_id = 4  # Placeholder for variable ID to send data to
+get_variable_size(session_id=session_id, var_id=var_send_id)
 data_array = list(range(300, 320))  # Example data range
 check_and_send_data(session_id, var_send_id, data_array)
 
@@ -55,6 +59,7 @@ time.sleep(10)
 
 # Attempt to receive data for a specified variable
 var_receive_id = 1  # Placeholder for variable ID to receive data from
+get_variable_size(session_id=session_id, var_id=var_receive_id)
 print("------ Sleeping for 10 seconds ------")
 check_and_receive_data(session_id, var_receive_id)
 
