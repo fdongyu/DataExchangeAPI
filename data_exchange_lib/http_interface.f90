@@ -5,7 +5,7 @@ module http_interface
     ! Define interfaces to C functions for HTTP interactions
     interface
         ! Creates a new session on the server
-        subroutine create_session_c(url, source_model_ID, destination_model_ID, client_id, &
+        subroutine create_session(url, source_model_ID, destination_model_ID, client_id, &
                                     initiator_id, inviter_id, input_variables_ID, input_variables_size, &
                                     no_of_input_variables, output_variables_ID, output_variables_size, &
                                     no_of_output_variables) bind(C)
@@ -18,7 +18,7 @@ module http_interface
             integer(c_int), value :: no_of_input_variables
             integer(c_int), intent(in) :: output_variables_ID(*), output_variables_size(*)
             integer(c_int), value :: no_of_output_variables
-        end subroutine create_session_c
+        end subroutine create_session
 
         ! Joins an existing session on the server
         subroutine join_session_c(url, session_id, client_id) bind(C)
@@ -40,52 +40,53 @@ module http_interface
             integer(c_int), intent(in) :: session_id(*)
         end subroutine print_all_variable_flags
 
-        ! Gets the size of a variable from the server
-        function get_variable_size_c(base_url, session_id, var_id) bind(C)
-            import :: c_char, c_int
-            character(kind=c_char), intent(in) :: base_url(*)
-            integer(c_int), intent(in) :: session_id(*)
-            integer(c_int), value :: var_id
-            integer(c_int) :: get_variable_size_c
-        end function get_variable_size_c
-
         ! Gets the flag status for a specific variable
-        function get_variable_flag_c(base_url, session_id, var_id) bind(C)
+        function get_variable_flag(base_url, session_id, var_id) bind(C)
             import :: c_char, c_int
             character(kind=c_char), intent(in) :: base_url(*)
             integer(c_int), intent(in) :: session_id(*)
             integer(c_int), value :: var_id
-            integer(c_int) :: get_variable_flag_c
-        end function get_variable_flag_c
+            integer(c_int) :: get_variable_flag
+        end function get_variable_flag
+
+        ! Gets the size of a variable from the server
+        function get_variable_size(base_url, session_id, var_id) bind(C)
+            import :: c_char, c_int
+            character(kind=c_char), intent(in) :: base_url(*)
+            integer(c_int), intent(in) :: session_id(*)
+            integer(c_int), value :: var_id
+            integer(c_int) :: get_variable_size
+        end function get_variable_size
+
 
         ! Sends data to the server
-        function send_data_to_server(url, session_id, var_id, arr, n) bind(C)
+        function send_data(url, session_id, var_id, arr, n) bind(C)
             import :: c_char, c_int, c_double
             character(kind=c_char), intent(in) :: url(*)
             integer(c_int), intent(in) :: session_id(*)
             integer(c_int), value :: var_id
             real(c_double), intent(in) :: arr(*)
             integer(c_int), value :: n
-            integer(c_int) :: send_data_to_server
-        end function send_data_to_server
+            integer(c_int) :: send_data
+        end function send_data
         
         ! Receives data from the server
-        function receive_data_from_server(url, session_id, var_id, arr, n) bind(C)
+        function receive_data(url, session_id, var_id, arr, n) bind(C)
             import :: c_char, c_int, c_double
             character(kind=c_char), intent(in) :: url(*)
             integer(c_int), intent(in) :: session_id(*)
             integer(c_int), value :: var_id
             real(kind=c_double), intent(out) :: arr(*)
             integer(c_int), value :: n
-            integer(c_int) :: receive_data_from_server
-        end function receive_data_from_server
+            integer(c_int) :: receive_data
+        end function receive_data
 
         ! Ends a session on the server
-        subroutine end_session_c(server_url, session_id, client_id) bind(C)
+        subroutine end_session(server_url, session_id, client_id) bind(C)
             import :: c_char, c_int
             character(kind=c_char), intent(in) :: server_url(*), client_id(*)
             integer(c_int), intent(in) :: session_id(*)
-        end subroutine end_session_c
+        end subroutine end_session
     end interface
 
 end module http_interface
