@@ -23,32 +23,40 @@ module data_exchange
 
 contains
 
+  !===============================================================================
   subroutine set_server_url(url)
     character(len=*), intent(in) :: url
     server_url = trim(url)
   end subroutine set_server_url
 
+  !===============================================================================
+
   subroutine set_session_id(id)
     integer(c_int), dimension(5), intent(in) :: id
     session_id = id
   end subroutine set_session_id
+  
+  !===============================================================================
 
   subroutine set_var_send(v)
     integer, intent(in) :: v
     var_send = v
   end subroutine set_var_send
 
+  !===============================================================================
+
   subroutine set_var_receive(v)
     integer, intent(in) :: v
     var_receive = v
   end subroutine set_var_receive
 
+  !===============================================================================
 
   subroutine start_session(sd)
     type(session_data), intent(inout) :: sd
 
     ! Create a session with the server using the data from 'sd'
-    call create_session_c(trim(server_url), sd%source_model_ID, sd%destination_model_ID, trim(client_id), &
+    call create_session(trim(server_url), sd%source_model_ID, sd%destination_model_ID, trim(client_id), &
                           sd%initiator_id, sd%inviter_id, sd%input_variables_ID, &
                           sd%input_variables_size, size(sd%input_variables_ID), &
                           sd%output_variables_ID, sd%output_variables_size, &
@@ -94,18 +102,18 @@ contains
       call print_all_variable_flags(trim(server_url), session_id)
 
       ! Prepare data array
-      arr_length = get_variable_size_c(trim(server_url), session_id, var_send)
+      arr_length = get_variable_size(trim(server_url), session_id, var_send)
       print *, 'Array length to send:', arr_length
       allocate(arr_send(arr_length))
       arr_send = [(real(i, kind=c_double), i = 1, arr_length)]
 
       ! Attempt to send data with retries
       do while (retries < max_retries)
-          flag = get_variable_flag_c(trim(server_url), session_id, var_send)
+          flag = get_variable_flag(trim(server_url), session_id, var_send)
           print *, "Flag status:", flag
 
           if (flag == 0) then
-              status_send = send_data_to_server(trim(server_url), session_id, var_send, arr_send, arr_length)
+              status_send = send_data(trim(server_url), session_id, var_send, arr_send, arr_length)
               if (status_send == 1) then
                   print *, "Data successfully sent."
                   exit
@@ -153,17 +161,17 @@ contains
       call print_all_variable_flags(trim(server_url), session_id)
 
       ! Determine the size of the data to be received and allocate memory
-      arr_length = get_variable_size_c(trim(server_url), session_id, var_receive)
+      arr_length = get_variable_size(trim(server_url), session_id, var_receive)
       allocate(arr_receive(arr_length))
 
       ! Attempt to receive data with retries
       do while (retries < max_retries)
-          flag = get_variable_flag_c(trim(server_url), session_id, var_receive)
+          flag = get_variable_flag(trim(server_url), session_id, var_receive)
           print *, "Flag status:", flag
 
           if (flag == 1) then
               print *, "Flag set, attempting to receive data..."
-              status_receive = receive_data_from_server(trim(server_url), session_id, var_receive, arr_receive, arr_length)
+              status_receive = receive_data(trim(server_url), session_id, var_receive, arr_receive, arr_length)
               if (status_receive == 1) then
                   print *, "Data received successfully:"
                   do i = 1, arr_length
@@ -192,14 +200,16 @@ contains
 
   !===============================================================================
 
-  subroutine end_session()
+  subroutine end_session_now()
       use http_interface                  ! Include module for HTTP interface methods
       use iso_c_binding, only: c_int      ! Use ISO C binding to ensure compatibility with C types
       implicit none
 
       ! End the session with the server
-      call end_session_c(trim(server_url), session_id, trim(client_id))
+      call end_session(trim(server_url), session_id, trim(client_id))
 
-  end subroutine end_session
+  end subroutine end_session_now
+
+  !===============================================================================
 
 end module data_exchange
