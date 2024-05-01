@@ -102,7 +102,7 @@ After compilation, run the E3SM client:
 ```
 This will execute the compiled binary and engage in the data exchange process with the server and the Cyberwater client.
 
-## Session Management
+## Session Management : Primary API Endpoints
 Both clients will interact with the data exchange server, which handles sessions, flags, and data transmission. Use the following endpoints to manage and monitor sessions:
 
 - `/create_session/{client_id}`: Initiates a new session.
