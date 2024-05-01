@@ -93,7 +93,7 @@ contains
       integer :: sleep_off_time                            ! Sleep time between retries in seconds
 
       ! Initialization of session parameters
-      sleep_off_time = 3                                   ! Set sleep offset time between retries
+      sleep_off_time = 5                                   ! Set sleep offset time between retries
       max_retries = 5                                      ! Set maximum number of retries
       retries = 0                                          ! Initialize retry counter
 
@@ -153,7 +153,7 @@ contains
       integer :: sleep_time, base_sleep_time                    ! Sleep times between retries
 
       sleep_time = 5                                            ! Set sleep time
-      max_retries = 10                                          ! Set maximum number of retries
+      max_retries = 5                                           ! Set maximum number of retries
       retries = 0                                               ! Initialize retry counter
 
       ! Retrieve and print session and flag status
