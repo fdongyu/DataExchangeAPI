@@ -107,8 +107,8 @@ Both clients will interact with the data exchange server, which handles sessions
 
 - `/create_session/{client_id}`: Initiates a new session.
 - `/join_session`: Joins an existing session.
-- `/list_sessions`: Lists all current sessions and their statuses.
-- `/get_flags`: Retrieves the flag status of all variables in a session.
+- `/print_all_session_statuses`: Prints list of all current sessions and their statuses.
+- `/print_all_variable_flags`: Retrieves the flag status of all variables in a session.
 - `/get_variable_flag`: Gets the flag status for a specific variable.
 - `/get_variable_size`: Fetches the size of a specific variable.
 - `/send_data`: Sends binary data for a specific variable.
