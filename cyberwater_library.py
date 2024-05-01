@@ -3,7 +3,7 @@ import struct
 import time 
 
 # Constants
-SERVER_URL = "http://10.249.0.171:8080"
+SERVER_URL = "http://10.249.0.4:8080"
 CLIENT_ID = "ClientB"
 
 def create_session(source_model_ID, destination_model_ID, initiator_id, inviter_id,
@@ -64,11 +64,11 @@ def join_session(session_id):
     else:
         print("Error occurred while joining session:", response.text)
 
-def get_all_session_statuses():
+def print_all_session_statuses():
     """
     Retrieves and prints the status of all sessions from the server.
     """
-    response = requests.get(f"{SERVER_URL}/list_sessions")
+    response = requests.get(f"{SERVER_URL}/print_all_session_statuses")
     if response.ok:
         sessions = response.json()
         print("Session statuses:")
@@ -77,14 +77,14 @@ def get_all_session_statuses():
     else:
         print(f"Error occurred while retrieving session statuses: {response.text}")
 
-def get_flags(session_id):
+def print_all_variable_flags(session_id):
     """
     Fetches and prints flags for a given session ID from the server.
     
     Parameters:
         session_id (str): The ID of the session for which flags are being requested.
     """
-    response = requests.get(f"{SERVER_URL}/get_flags", params={"session_id": session_id})
+    response = requests.get(f"{SERVER_URL}/print_all_variable_flags", params={"session_id": session_id})
     if response.ok:
         flags = response.json()
         print(f"Flags for session {session_id}: {flags}")
@@ -120,6 +120,34 @@ def get_variable_flag(session_id, var_id):
         print("Error occurred while retrieving flag status:", response.text)
         return None
 
+def get_variable_size(session_id, var_id):
+    """
+    Retrieves the size of a specific variable within a session from the server.
+
+    Parameters:
+        base_url (str): The base URL of the server API.
+        session_id (str): The ID of the session.
+        var_id (int): The ID of the variable.
+
+    Returns:
+        int: The size of the variable if the request is successful, -1 otherwise.
+    """
+    # Construct the URL and set parameters for the GET request
+    url = f"{SERVER_URL}/get_variable_size"
+    params = {'session_id': session_id, 'var_id': var_id}
+
+    # Perform the GET request
+    response = requests.get(url, params=params)
+    if response.ok:
+        # Parse and return the size from the JSON response
+        size_info = response.json()
+        print(f"Size of variable {var_id} in session {session_id}: {size_info.get('size', 'Unknown')}")
+        return size_info.get('size', -1)
+    else:
+        # Log and return -1 if there was an error during the request
+        print("Error occurred while retrieving variable size:", response.text)
+        return -1
+    
 def send_data(session_id, var_id, data):
     """
     Sends a list of double precision floats as binary data to the server for a specific session and variable.
