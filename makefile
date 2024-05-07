@@ -13,12 +13,12 @@ LIBS = -lcurl
 LIB_DIR = data_exchange_lib/
 
 # Source files
-FORTRAN_SOURCES = $(LIB_DIR)http_interface.f90 e3sm_test.f90
+FORTRAN_SOURCES = $(LIB_DIR)http_interface.f90 $(LIB_DIR)data_exchange.f90 e3sm_test.f90
 C_SOURCES = $(LIB_DIR)http_impl.c
 
 # Object files
-FORTRAN_OBJECTS = $(FORTRAN_SOURCES:.f90=.o)
-C_OBJECTS = $(C_SOURCES:.c=.o)
+FORTRAN_OBJECTS = $(patsubst %.f90,%.o,$(FORTRAN_SOURCES))
+C_OBJECTS = $(patsubst %.c,%.o,$(C_SOURCES))
 
 # Executable name
 EXECUTABLE = e3sm_test
