@@ -3,7 +3,7 @@ import struct
 import time 
 
 # Constants
-SERVER_URL = "http://10.249.0.4:8080"
+SERVER_URL = "http://10.252.1.76:8080"
 CLIENT_ID = "ClientB"
 
 def create_session(source_model_ID, destination_model_ID, initiator_id, inviter_id,
