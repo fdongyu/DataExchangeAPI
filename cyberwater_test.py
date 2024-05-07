@@ -50,8 +50,13 @@ time.sleep(10)
 # Prepare example data to send
 var_send_id = 4  # Placeholder for variable ID to send data to
 get_variable_size(session_id=session_id, var_id=var_send_id)
-data_array = list(range(300, 320))  # Example data range
+start_send_time = time.time()
+arr_length = get_variable_size(session_id=session_id, var_id=var_send_id)
+data_array = list(range(30, 30+arr_length))  # Example data range
 check_and_send_data(session_id, var_send_id, data_array)
+end_send_time = time.time()
+sending_time = end_send_time - start_send_time
+
 
 # Sleep
 print("------ Sleeping for 10 seconds ------")
@@ -61,7 +66,14 @@ time.sleep(10)
 var_receive_id = 1  # Placeholder for variable ID to receive data from
 get_variable_size(session_id=session_id, var_id=var_receive_id)
 print("------ Sleeping for 10 seconds ------")
+start_processing_time = time.time()
 check_and_receive_data(session_id, var_receive_id)
+end_processing_time = time.time()
+processing_time = end_processing_time - start_processing_time
+
+print("------ Analysis for varible length: ", arr_length, " ------")
+print("Array sending time:", sending_time, "seconds")
+print("Array processing time:", processing_time, "seconds")
 
 # Sleep before ending the session to ensure all processes complete
 time.sleep(10)
