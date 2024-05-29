@@ -10,17 +10,12 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 app = FastAPI()
 
-# Sessions
-sessions = {}
-session_lock = threading.Lock()
-
 # Pydantic models to validate incoming data
 class SessionData(BaseModel):
     source_model_ID: int
     destination_model_ID: int
-    client_id: str
     initiator_id: int
-    inviter_id: int
+    invitee_id: int
     input_variables_ID: List[int] = []
     input_variables_size: List[int] = []
     output_variables_ID: List[int] = []
@@ -28,7 +23,7 @@ class SessionData(BaseModel):
 
 class JoinSessionData(BaseModel):
     session_id: str
-    client_id: str
+    invitee_id: int
 
 # Shared resource: sessions dictionary and a lock to manage concurrent access
 sessions = {}
@@ -59,11 +54,11 @@ async def print_sessions_every_10_seconds():
                 print(f"Session ID: {session_id}, Flags: {flags}")
         await asyncio.sleep(10)
 
-@app.post("/create_session/{client_id}")
-async def create_session(client_id: str, session_data: SessionData):
+@app.post("/create_session")
+async def create_session(session_data: SessionData):
     """ Create a new session with given parameters and store it in a global dictionary """
     with session_lock:
-        base_session_id = f"{session_data.source_model_ID},{session_data.destination_model_ID},{session_data.initiator_id},{session_data.inviter_id}"
+        base_session_id = f"{session_data.source_model_ID},{session_data.destination_model_ID},{session_data.initiator_id},{session_data.invitee_id}"
         session_id = base_session_id + ",1"
         i = 1
         while session_id in sessions:
@@ -79,7 +74,7 @@ async def create_session(client_id: str, session_data: SessionData):
             'status': 'created',
             'data': {var: None for var in set(session_data.input_variables_ID) | set(session_data.output_variables_ID)},
             'flags': {var: 0 for var in set(session_data.input_variables_ID) | set(session_data.output_variables_ID)},
-            'client_vars': {client_id: list(session_data.input_variables_ID)},
+            'client_vars': {session_data.initiator_id: list(session_data.input_variables_ID)},
             'end_requests': set(),
             'var_sizes': var_sizes
         }
@@ -91,7 +86,7 @@ async def join_session(data: JoinSessionData):
     """ Allow a new client to join an existing session """
     with session_lock:
         session_id = data.session_id
-        joining_client_id = data.client_id
+        joining_invitee_id = data.invitee_id
 
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -106,7 +101,7 @@ async def join_session(data: JoinSessionData):
         joining_client_input_vars = list(all_vars - set(initiator_input_vars))
 
         session['status'] = 'active'
-        session['client_vars'][joining_client_id] = joining_client_input_vars
+        session['client_vars'][joining_invitee_id] = joining_client_input_vars
 
         return {"status": "joined and activated", "session_id": session_id}
 
@@ -194,39 +189,37 @@ async def receive_data(session_id: str, var_id: int):
 
 class EndSessionData(BaseModel):
     session_id: str
-    client_id: str
+    user_id: int
 
 @app.post("/end_session")
 async def end_session(data: EndSessionData):
-    """
-    Process a request to end a session by a specific client.
-    """
     with session_lock:
         session_id = data.session_id
-        client_id = data.client_id
+        user_id = data.user_id  # Updated to use 'user_id'
 
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found")
 
         session = sessions[session_id]
-        if client_id not in session['client_vars']:
-            raise HTTPException(status_code=404, detail="Client not part of the session")
+        if user_id not in session['client_vars']:
+            raise HTTPException(status_code=404, detail="User not part of the session")
 
-        session['end_requests'].add(client_id)
+        session['end_requests'].add(user_id)
 
         if len(session['end_requests']) < len(session['client_vars']):
             session['status'] = 'partial end'
-            vars_to_clear = session['client_vars'][client_id]
+            vars_to_clear = session['client_vars'][user_id]
             for var in vars_to_clear:
+                print ("Variable Clearing:", var)
                 if var in session['data']:
                     session['data'][var] = None
                     session['flags'][var] = 0
-            return {"status": "Partial session end for client " + client_id, "session_id": session_id}
+            return {"status": "Partial session end for user " + str(user_id), "session_id": session_id}
         else:
             session['status'] = 'end'
             del sessions[session_id]
             return {"status": "Session ended successfully", "session_id": session_id}
-
+        
 if __name__ == '__main__':
     # Start the server with Uvicorn
     loop = asyncio.get_event_loop()

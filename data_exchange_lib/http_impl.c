@@ -10,9 +10,8 @@
  * @param base_url Base URL of the server
  * @param source_model_ID ID of the source model
  * @param destination_model_ID ID of the destination model
- * @param client_id Client ID
- * @param initiator_id ID of the initiator client
- * @param inviter_id ID of the inviter client
+ * @param initiator_id ID of the initiator
+ * @param invitee_id ID of the invitee
  * @param input_variables_ID Array of input variable IDs
  * @param input_variables_size Array of sizes corresponding to input variables
  * @param no_of_input_variables Number of input variables
@@ -21,7 +20,7 @@
  * @param no_of_output_variables Number of output variables
  */
 void create_session(const char* base_url, int source_model_ID, int destination_model_ID, 
-                      const char* client_id, int initiator_id, int inviter_id,
+                      int initiator_id, int invitee_id,
                       int* input_variables_ID, int* input_variables_size, 
                       int no_of_input_variables, int* output_variables_ID, int* output_variables_size, 
                       int no_of_output_variables) {
@@ -32,12 +31,11 @@ void create_session(const char* base_url, int source_model_ID, int destination_m
     char postFields[4096]; // Buffer for JSON payload
     char arrays[1024]; // Buffer for temporary storage of array strings
 
-    // Construct the URL with the client_id appended to create a session
-    snprintf(full_url, sizeof(full_url), "%s/create_session/%s", base_url, client_id);
+    snprintf(full_url, sizeof(full_url), "%s/create_session", base_url);
 
     // Start constructing the JSON payload
-    sprintf(postFields, "{\"source_model_ID\": \"%d\", \"destination_model_ID\": \"%d\", \"client_id\": \"%s\", \"initiator_id\": \"%d\", \"inviter_id\": \"%d\", ",
-            source_model_ID, destination_model_ID, client_id, initiator_id, inviter_id);
+    sprintf(postFields, "{\"source_model_ID\": \"%d\", \"destination_model_ID\": \"%d\", \"initiator_id\": \"%d\", \"invitee_id\": \"%d\", ",
+            source_model_ID, destination_model_ID, initiator_id, invitee_id);
 
     // Append input variables ID and sizes to the JSON payload
     strcat(postFields, "\"input_variables_ID\": [");
@@ -90,59 +88,55 @@ void create_session(const char* base_url, int source_model_ID, int destination_m
 }
 
 /**
- * Function to join a session by making a POST request to the server with session ID and client ID.
+ * Function to join a session by making a POST request to the server with session ID and invitee ID.
+ * This function constructs a JSON payload that includes the session ID and the invitee ID.
+ * The invitee ID is used to authenticate the request and identify the user attempting to join the session.
+ *
  * @param base_url Base URL of the server
  * @param session_id Array containing session identifiers
- * @param client_id Client ID for authentication
+ * @param invitee_id Invitee identifier, used to authenticate the user and manage session access permissions.
  */
-void join_session_c(const char* base_url, const int session_id[], const char* client_id) {
-    CURL *curl;  // CURL handle
-    CURLcode res;  // Result of CURL operations
-    char postFields[1024];  // Buffer for JSON payload
-    char full_url[2048];  // Buffer for the full URL
-    char session_id_str[256];  // Formatted session ID string
+void join_session_c(const char* base_url, const int session_id[], int invitee_id) {
+    CURL *curl;
+    CURLcode res;
+    char postFields[1024];
+    char full_url[2048];
+    char session_id_str[256];
+    char invitee_id_str[32];
 
-    // Construct the full URL for the join session endpoint
     snprintf(full_url, sizeof(full_url), "%s/join_session", base_url);
-
-    // Format session ID from the array into a single, comma-separated string
-    strcpy(session_id_str, "");  // Initialize the session_id_str array
-    char temp[10];  // Temporary buffer for formatting integers
-    for (int i = 0; i < 5; ++i) {  // Assumes there are always 5 elements
+    strcpy(session_id_str, "");
+    char temp[10];
+    for (int i = 0; i < 5; ++i) {
         snprintf(temp, sizeof(temp), "%d", session_id[i]);
         strcat(session_id_str, temp);
-        if (i < 4) strcat(session_id_str, ",");  // Add commas between IDs
+        if (i < 4) strcat(session_id_str, ",");
     }
 
-    // Construct the JSON payload using session_id and client_id
-    snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"client_id\": \"%s\"}", session_id_str, client_id);
+    snprintf(invitee_id_str, sizeof(invitee_id_str), "%d", invitee_id);
+    snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"invitee_id\": %s}", session_id_str, invitee_id_str);
 
-    // Initialize CURL
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
     if (curl) {
         struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
 
-        // Set CURL options for the POST request
         curl_easy_setopt(curl, CURLOPT_URL, full_url);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields);
 
-        // Execute the POST request
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-        } else {
-            printf("Attempt to join session was successful.\n");
         }
 
-        // Clean up CURL resources
         curl_easy_cleanup(curl);
         curl_slist_free_all(headers);
     }
-    curl_global_cleanup();  // Global CURL cleanup
+    curl_global_cleanup();
 }
+
 
 /**
  * Callback function for printing data received from a CURL request.
@@ -585,48 +579,46 @@ int receive_data(const char* base_url, const int session_id[], int var_id, doubl
 
 
 /**
- * Ends a session on the server by sending a POST request with the session ID and client ID as JSON.
+ * Ends a session on the server by sending a POST request with the session ID and user ID as JSON.
+ * This function constructs a JSON payload that includes the session ID and the user ID (which can be either an initiator_id or invitee_id).
+ * The user_id is used to identify which user is attempting to end the session.
  * 
  * @param base_url The base URL of the server API.
  * @param session_id Array containing session identifiers.
- * @param client_id Client identifier.
+ * @param user_id User identifier, used to authenticate the request and identify the user within the session context.
  */
-void end_session(const char* base_url, const int session_id[], const char* client_id) {
+void end_session(const char* base_url, const int session_id[], int user_id) {
     CURL *curl;
     CURLcode res;
     char full_url[2048];
-    char session_id_str[256];  // Buffer to store the formatted session ID
-    char postFields[1024];     // Buffer to hold the JSON payload for POST
-    struct curl_slist *headers = NULL; // Header list for the HTTP request
+    char session_id_str[256];
+    char postFields[1024];
+    char user_id_str[32];
 
-    // Construct the full URL for the end session endpoint
     snprintf(full_url, sizeof(full_url), "%s/end_session", base_url);
 
-    // Format the session_id array into a comma-separated string
     strcpy(session_id_str, "");
     char temp[10];
-    for (int i = 0; i < 5; ++i) { // Assumes there are always 5 elements
+    for (int i = 0; i < 5; ++i) {
         snprintf(temp, sizeof(temp), "%d", session_id[i]);
         strcat(session_id_str, temp);
         if (i < 4) strcat(session_id_str, ",");
     }
 
-    // Construct the JSON payload
-    snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"client_id\": \"%s\"}", session_id_str, client_id);
+    snprintf(user_id_str, sizeof(user_id_str), "%d", user_id);
+    snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"user_id\": %s}", session_id_str, user_id_str);
 
-    // Initialize CURL
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
     if (curl) {
+        struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
 
-        // Set CURL options for the POST request
         curl_easy_setopt(curl, CURLOPT_URL, full_url);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields);
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
 
-        // Perform the request and check for errors
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
@@ -634,12 +626,8 @@ void end_session(const char* base_url, const int session_id[], const char* clien
             printf("Session ended successfully.\n");
         }
 
-        // Clean up CURL handle and headers
         curl_easy_cleanup(curl);
         curl_slist_free_all(headers);
-    } else {
-        fprintf(stderr, "Failed to initialize curl\n");
     }
-
     curl_global_cleanup();
 }
