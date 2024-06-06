@@ -7,10 +7,10 @@ program e3sm_test
     integer :: i
     real(c_double), dimension(:), allocatable :: arr_receive
     integer :: arr_receive_length
+    integer :: var_receive_size, var_receive_status
 
     ! Set the server URL at runtime
-    call set_server_url("http://10.249.0.29:8080")
-
+    call set_server_url("http://10.252.1.95:8080")
 
     ! User sets values directly
     sd%source_model_ID = 2001
@@ -35,6 +35,12 @@ program e3sm_test
     ! call join_current_session()
     ! print *, "------ Sleeping for 10 seconds ------"
     ! call sleep(10)
+
+    ! Check session availability
+    call check_session_availability()
+
+    ! If needed, also check specific session flags
+    call check_specific_session_flags(session_id)
     
     ! Send data to the server
     var_send = 4
@@ -48,9 +54,15 @@ program e3sm_test
 
     ! Receive data from the server
     var_receive = 1
-    arr_receive_length = get_variable_size(trim(server_url)// C_NULL_CHAR, session_id, var_receive)
+    call get_specific_variable_size(session_id, var_receive, var_receive_size, var_receive_status)
+    if (var_receive_status == 0) then
+        print *, "Variable size for ID", var_receive, "is", var_receive_size
+    else
+        print *, "Failed to retrieve variable size for ID", var_receive
+    endif
+
     ! Allocate the receive array
-    allocate(arr_receive(arr_receive_length))
+    allocate(arr_receive(var_receive_size))
     call recv_data_with_retries(var_receive,arr_receive, 5 ,5)
     ! Clean up allocated resources
     deallocate(arr_receive)

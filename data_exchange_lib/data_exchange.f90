@@ -9,6 +9,7 @@ module data_exchange
   ! [source_model_ID, destination_model_ID, initiator_id, invitee_id, unique_counter]
   integer :: var_send  ! Global variable ID for sending data
   integer :: var_receive  ! Global variable ID for receiving data
+  logical :: server_url_set = .false.    ! Flag to check if server URL has been set
 
   type session_data
     integer :: source_model_ID
@@ -26,7 +27,13 @@ contains
   !===============================================================================
   subroutine set_server_url(url)
     character(len=*), intent(in) :: url
-    server_url = trim(url)
+    if (len(trim(url)) > 0) then
+      server_url = trim(url)
+      server_url_set = .true.
+    else
+      print *, "Error: Invalid server URL provided."
+      server_url_set = .false.
+    endif
   end subroutine set_server_url
 
   !===============================================================================
@@ -64,12 +71,66 @@ contains
 
   !===============================================================================
 
-  subroutine send_data_with_retries(var_send, arr_send, max_retries, sleep_off_time)
+  subroutine check_session_availability()
+    ! Checks the availability of sessions and prints their statuses
+    if (.not. server_url_set) then
+        print *, "Error: Server URL not set. Please set a valid server URL before checking session statuses."
+        return
+    endif
+
+    ! Call the C binding to print all session statuses
+    call print_all_session_statuses(trim(server_url) // C_NULL_CHAR)
+  end subroutine check_session_availability
+
+  !===============================================================================
+
+  subroutine check_specific_session_flags(session_ids)
+    integer, dimension(:), intent(in) :: session_ids
+    ! Checks and prints the flag status for the variables of a specific session
+    if (.not. server_url_set) then
+        print *, "Error: Server URL not set. Please set a valid server URL before checking variable flags."
+        return
+    endif
+
+    ! Ensure session IDs are passed correctly
+    if (size(session_ids) /= 5) then
+        print *, "Error: Invalid session ID array size."
+        return
+    endif
+
+    ! Call the C binding to print all variable flags for the session
+    call print_all_variable_flags(trim(server_url) // C_NULL_CHAR, session_ids)
+  end subroutine check_specific_session_flags
+
+  !===============================================================================
+
+  subroutine get_specific_variable_size(session_ids, var_id, var_size, status)
+    integer, dimension(:), intent(in) :: session_ids
+    integer, intent(in) :: var_id
+    integer, intent(out) :: var_size
+    integer, intent(out) :: status
+
+    ! Call the low-level API function to get the size
+    var_size = get_variable_size(trim(server_url)//C_NULL_CHAR, session_ids, var_id)
+
+    ! Status checking after API call
+    if (var_size < 0) then
+      print *, "Error: Unable to get variable size for ID", var_id
+      status = -1  ! Indicating an error
+    else
+      status = 0   ! Indicating success
+    end if
+  end subroutine get_specific_variable_size
+
+
+  !===============================================================================
+
+  subroutine send_data_with_retries(var_send, arr_send, max_retries, sleep_time)
       use http_interface           
       use iso_c_binding, only: c_double 
       implicit none
 
-      integer, intent(in) :: var_send, max_retries, sleep_off_time
+      integer, intent(in) :: var_send, max_retries, sleep_time
       real(c_double), dimension(:), intent(in) :: arr_send
 
       ! Variable declarations
@@ -100,7 +161,7 @@ contains
           else
               print *, "Flag is not set for sending, retrying..."
               retries = retries + 1
-              call sleep(sleep_off_time)
+          call sleep(sleep_time)
           end if
       end do
 

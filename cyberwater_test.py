@@ -2,7 +2,7 @@ from cyberwater_library import *
 import time
 import gc
 
-server_url = "http://10.249.0.29:8080"
+server_url = "http://10.252.1.95:8080"
 
 
 # # Define parameters for the session
