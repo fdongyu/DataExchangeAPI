@@ -125,7 +125,7 @@ contains
 
   !===============================================================================
 
-  subroutine send_data_with_retries(var_send, arr_send, max_retries, sleep_time)
+  function send_data_with_retries(var_send, arr_send, max_retries, sleep_time) result(status_send)
       use http_interface           
       use iso_c_binding, only: c_double 
       implicit none
@@ -135,12 +135,13 @@ contains
 
       ! Variable declarations
       integer :: arr_length                                ! Length of the array to send
-      integer :: i                                         ! Loop variable
-      integer :: flag                                      ! Flag to check status
       integer :: retries                                   ! Retry count allowed
-      integer :: status_send                               ! Status of the send operation
+      integer :: flag                                      ! Flag to check status
 
-      retries = 0                                          ! Initialize retry counter
+      integer :: status_send                               ! Function result
+
+      status_send = 0                                       ! Initialize status_send to 0 (failure)
+      retries = 0                                           ! Initialize retry counter
 
       ! Prepare data array
       arr_length = get_variable_size(trim(server_url)// C_NULL_CHAR, session_id, var_send)
@@ -154,26 +155,24 @@ contains
               status_send = send_data(trim(server_url)// C_NULL_CHAR, session_id, var_send, arr_send, arr_length)
               if (status_send == 1) then
                   print *, "Data successfully sent."
-                  exit
+                  return
               else
                   print *, "Failed to send data, retrying..."
+                  retries = retries + 1
               end if
           else
               print *, "Flag is not set for sending, retrying..."
               retries = retries + 1
+          endif
           call sleep(sleep_time)
-          end if
       end do
 
       ! Check if maximum retries have been exceeded
       if (retries >= max_retries) then
           print *, "Failed to send data for var_id", var_send, "after", max_retries, "attempts due to flag status."
       endif
+  end function send_data_with_retries
 
-      ! Clean up
-    !   deallocate(arr_send)
-
-  end subroutine send_data_with_retries
   !===============================================================================
 
   subroutine recv_data_with_retries(var_receive, arr_receive, max_retries, sleep_off_time)

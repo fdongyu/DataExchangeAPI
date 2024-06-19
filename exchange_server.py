@@ -151,6 +151,28 @@ async def get_variable_size(session_id: str, var_id: int):
         else:
             raise HTTPException(status_code=404, detail="Session not found")
 
+@app.get("/get_session_status")
+async def get_session_status(session_id: str):
+    """
+    Retrieves the status of a specific session.
+
+    Parameters:
+        session_id (str): The ID of the session.
+
+    Returns:
+        JSON response with the session status or an error message.
+    """
+    with session_lock:  # Assuming session_lock is a threading lock for thread-safe operations
+        # Check if the session exists
+        if session_id not in sessions:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # Return the status of the session
+        session_status = sessions[session_id]['status']
+        return {"session_id": session_id, "status": session_status}
+
+# Example usage would involve making a GET request to /get_session_status with a session_id parameter
+
 @app.post("/send_data")
 async def send_data(request: Request, session_id: Optional[str] = Header(None), var_id: Optional[int] = Header(None)):
     """
@@ -224,4 +246,4 @@ if __name__ == '__main__':
     # Start the server with Uvicorn
     loop = asyncio.get_event_loop()
     loop.create_task(print_sessions_every_10_seconds())
-    uvicorn.run(app, host='0.0.0.0', port=8080)
+    uvicorn.run(app, host='0.0.0.0', port=8000)
