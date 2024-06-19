@@ -9,7 +9,7 @@ program e3sm_test
     integer :: receive_length, receive_var_size, receive_status, receive_var_id
 
     ! Set the server URL at runtime
-    call set_server_url("http://10.252.1.58:8000")
+    call set_server_url("http://10.249.0.85:8000")
 
     ! User sets values directly
     sd%source_model_ID = 2001

@@ -63,6 +63,37 @@ def join_session(invitee_id):
 
     join_session_c(SERVER_URL, SESSION_ID, invitee_id)
 
+def join_session_with_retries(session_id, invitee_id, max_retries, sleep_time):
+    retries = 0
+    session_id = ','.join(map(str, session_id))
+    while retries < max_retries:
+        status = get_specific_session_status(SERVER_URL, session_id)
+        print(f"Session status: {status}")
+
+        if status == "active":
+            print("Session is active. Both clients have joined.")
+            return 1
+        elif status == "created":
+            print("Session is created. Joining our client.")
+            if join_session_c(SERVER_URL, session_id, invitee_id):
+                print("Successfully joined the session.")
+                return 1
+            else:
+                print("Failed to join the session. Retrying...")
+        elif status == "partial end":
+            print("Session is partially ended. Cannot join.")
+            return 0
+        elif status == "Session does not exist":
+            print("Session does not exist. Cannot join.")
+            return 0
+        else:
+            print("Unexpected status. Retrying...")
+
+        time.sleep(sleep_time)
+        retries += 1
+
+    print(f"Failed to join session {session_id} after {max_retries} attempts.")
+    return 0
 
 def check_specific_session_status(session_id):
     if not SERVER_URL_SET:
@@ -132,7 +163,7 @@ def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int
     return 0  # Ensure a return value if the loop exits normally
 
 
-def recv_data_with_retries(var_receive, max_retries, sleep_off_time):
+def recv_data_with_retries(var_receive, max_retries, sleep_time):
     """
     Tries to receive data multiple times, waiting for the data to become available based on a flag.
 
@@ -158,7 +189,7 @@ def recv_data_with_retries(var_receive, max_retries, sleep_off_time):
                 print("Failed to fetch data, retrying...")
         else:
             print("Flag not set for receiving, retrying...")
-            time.sleep(sleep_off_time)
+            time.sleep(sleep_time)
             retries += 1
 
     print(f"Failed to receive data for var_id {var_receive} after {max_retries} attempts due to flag status.")
