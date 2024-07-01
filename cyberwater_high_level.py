@@ -63,37 +63,23 @@ def join_session(invitee_id):
 
     join_session_c(SERVER_URL, SESSION_ID, invitee_id)
 
+
 def join_session_with_retries(session_id, invitee_id, max_retries, sleep_time):
     retries = 0
     session_id = ','.join(map(str, session_id))
     while retries < max_retries:
-        status = get_specific_session_status(SERVER_URL, session_id)
-        print(f"Session status: {status}")
-
-        if status == "active":
-            print("Session is active. Both clients have joined.")
+        response = join_session_c(SERVER_URL, session_id, invitee_id)
+        if response['success']:
+            print("Successfully joined the session.")
             return 1
-        elif status == "created":
-            print("Session is created. Joining our client.")
-            if join_session_c(SERVER_URL, session_id, invitee_id):
-                print("Successfully joined the session.")
-                return 1
-            else:
-                print("Failed to join the session. Retrying...")
-        elif status == "partial end":
-            print("Session is partially ended. Cannot join.")
-            return 0
-        elif status == "Session does not exist":
-            print("Session does not exist. Cannot join.")
-            return 0
         else:
-            print("Unexpected status. Retrying...")
-
-        time.sleep(sleep_time)
-        retries += 1
-
-    print(f"Failed to join session {session_id} after {max_retries} attempts.")
+            print(f"Failed to join the session. Error: {response['error']}")
+            if "Session is already active" in response['error']:
+                return 0
+            time.sleep(sleep_time)
+            retries += 1
     return 0
+
 
 def check_specific_session_status(session_id):
     if not SERVER_URL_SET:
@@ -135,6 +121,23 @@ def get_specific_variable_size(session_ids: List[int], var_id: int):
         return -1  # Indicating an error
     return var_size  # Indicating success
 
+
+def check_data_availability_with_retries(var_id, max_retries, sleep_time):
+    retries = 0
+    while retries < max_retries:
+        flag_status = get_variable_flag(SERVER_URL, SESSION_ID, var_id)
+        if flag_status == 1:
+            print(f"Data is available for session {SESSION_ID}, variable {var_id}.")
+            return 1
+        else:
+            print(f"Data not available for session {SESSION_ID}, variable {var_id}, retrying...")
+            time.sleep(sleep_time)
+            retries += 1
+    
+    print(f"Failed to find available data for session {SESSION_ID}, variable {var_id} after {max_retries} retries.")
+    return 0
+
+
 def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int, sleep_time: int):
     retries = 0
     while retries < max_retries:
@@ -162,38 +165,34 @@ def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int
 
     return 0  # Ensure a return value if the loop exits normally
 
-
 def recv_data_with_retries(var_receive, max_retries, sleep_time):
     """
-    Tries to receive data multiple times, waiting for the data to become available based on a flag.
+    Continuously attempts to receive data until successful or until the maximum number of retries is reached.
 
     Parameters:
+        server_url (str): The server URL.
+        session_id (str): The session ID.
         var_receive (int): The variable ID for which data is expected.
         max_retries (int): Maximum number of attempts to fetch the data.
-        sleep_off_time (int): Seconds to wait between retries.
+        sleep_time (int): Seconds to wait between retries.
     
     Returns:
-        list of float: The received data array of doubles, or None if failed to receive after retries.
+        list of float: The received data array, or None if failed to receive after all retries.
     """
     retries = 0
     while retries < max_retries:
-        flag = get_variable_flag(SERVER_URL, SESSION_ID, var_receive)
-        print(f"Flag status: {flag}")
-
-        if flag == 1:
-            data_array = receive_data(SERVER_URL, SESSION_ID, var_receive)
-            if data_array is not None:
-                print("Data received successfully.")
-                return data_array
-            else:
-                print("Failed to fetch data, retrying...")
+        data_array = receive_data(SERVER_URL, SESSION_ID, var_receive)
+        if data_array is not None:
+            print("Data received successfully.")
+            return data_array
         else:
-            print("Flag not set for receiving, retrying...")
+            print("Failed to fetch data, retrying...")
             time.sleep(sleep_time)
             retries += 1
 
-    print(f"Failed to receive data for var_id {var_receive} after {max_retries} attempts due to flag status.")
+    print(f"Failed to receive data for var_id {var_receive} after {max_retries} attempts.")
     return None
+
 
 def end_session_now(user_id: int):
     if not SERVER_URL_SET:

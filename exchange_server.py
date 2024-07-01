@@ -160,16 +160,23 @@ async def get_session_status(session_id: str):
         session_id (str): The ID of the session.
 
     Returns:
-        JSON response with the session status or an error message.
+        The status of the session as an integer.
     """
     with session_lock:  # Assuming session_lock is a threading lock for thread-safe operations
         # Check if the session exists
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        # Map statuses to integers
+        status_mapping = {
+            "created": 1,
+            "active": 2,
+            "partial end": 3
+        }
+
         # Return the status of the session
         session_status = sessions[session_id]['status']
-        return {"session_id": session_id, "status": session_status}
+        return status_mapping.get(session_status, 0)  # Return 0 if status is unknown
 
 # Example usage would involve making a GET request to /get_session_status with a session_id parameter
 

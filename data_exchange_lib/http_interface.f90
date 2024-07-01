@@ -1,5 +1,5 @@
 module http_interface
-    use, intrinsic :: iso_c_binding, only: c_int, c_char, c_double
+    use, intrinsic :: iso_c_binding, only: c_int, c_char, c_double, c_ptr
     implicit none
 
     ! Define interfaces to C functions for HTTP interactions
@@ -20,13 +20,13 @@ module http_interface
         end subroutine create_session
 
         ! Joins an existing session on the server
-        subroutine join_session_c(url, session_id, invitee_id) bind(C)
-            import
+        function join_session_c(url, session_id, invitee_id) bind(C, name="join_session_c")
+            import :: c_char, c_int
             character(kind=c_char), intent(in) :: url(*)
             integer(c_int), intent(in) :: session_id(*)
             integer(c_int), value :: invitee_id
-        end subroutine join_session_c
-
+            integer(c_int) :: join_status
+        end function join_session_c
 
         ! Retrieves and print the status of all sessions from the server
         subroutine print_all_session_statuses(url) bind(C)
@@ -40,6 +40,18 @@ module http_interface
             character(kind=c_char), intent(in) :: base_url(*)
             integer(c_int), intent(in) :: session_id(*)
         end subroutine print_all_variable_flags
+
+        function get_specific_session_status(url, session_id) bind(C, name="get_specific_session_status")
+            import :: c_char, c_int
+            character(kind=c_char), intent(in) :: url(*)
+            integer(c_int), intent(in) :: session_id(*)
+            integer(c_int) :: get_specific_session_status  ! Return type changed to integer
+        end function get_specific_session_status
+
+        subroutine c_free(ptr) bind(C, name="free")
+            import :: c_ptr
+            type(c_ptr), value :: ptr
+        end subroutine c_free
 
         ! Gets the flag status for a specific variable
         function get_variable_flag(base_url, session_id, var_id) bind(C)

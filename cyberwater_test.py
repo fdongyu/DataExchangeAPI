@@ -1,17 +1,39 @@
 from cyberwater_high_level import *
 # Usage of the module functions
-set_server_url("http://10.249.0.85:8000")
+set_server_url("http://128.55.64.34:8000")
 session_id = [2001,2005,35,38,1]
 set_session_id(session_id)
-# session_data = SessionData(1, 2, 3, 4, [1, 2, 3], [10, 20, 30], [4, 5, 6], [40, 50, 60])
-# start_session(session_data)
+session_data = SessionData(
+        source_model_id=2001,
+        destination_model_id=2005,
+        initiator_id=35,
+        invitee_id=38,
+        input_variables_id=[1],
+        input_variables_size=[50],
+        output_variables_id=[4],
+        output_variables_size=[50]
+)
+start_session(session_data)
 
-join_status = join_session_with_retries(session_id= session_id, invitee_id=38, max_retries=5, sleep_time=5)
-if join_status == 0:
-    print("Not able to join properly")
-elif join_status == 1:
-    print("Joined the session sucessfully ")
-print(check_specific_session_status(session_id))
+# # Check the session status first
+# session_status = check_specific_session_status(session_id)
+
+# if session_status is None:
+#     print("Failed to get session status.")
+# elif session_status == 1:
+#     print("Session status is 'created'")
+#     join_status = join_session_with_retries(session_id, invitee_id=38, max_retries=5, sleep_time=5)
+#     if join_status == 0:
+#         print("Not able to join properly.")
+#     elif join_status == 1:
+#         print("Joined the session successfully.")
+# elif session_status == 2:
+#     print("Session status is 'active'")
+# elif session_status == 3:
+#     print("Session status is 'partial end'")
+# else:
+#     print(f"Current status of session: {session_status}")
+
 print("------ Sleeping for 10 seconds ------")
 time.sleep(10)
 arr_send = [1]*50
@@ -19,12 +41,21 @@ status_send = send_data_with_retries(1, arr_send, 5, 5)
 print(f"Status of send operation: {status_send}")
 print("------ Sleeping for 10 seconds ------")
 time.sleep(10)
-arr_receive = recv_data_with_retries(4, 5, 5)
+
+flag_status = check_data_availability_with_retries(var_id=4, max_retries=5, sleep_time=5)
+if flag_status == 1:
+    arr_receive = recv_data_with_retries(var_receive = 4, max_retries = 5, sleep_time =5)
+    if arr_receive:
+        print("Data Received Sucessfully")
+    else:
+        print("Data reception failed after all retries.")
+else:
+    print("Data not available after retries.")
 print("------ Sleeping for 10 seconds ------")
 time.sleep(10)
-end_session_now(38)
 
+# End session using intiator_id, when session is started Cyberwater
+end_session_now(35)
 
-# Updates
-# Flag of sucessfully sent on E3SM side
-# Check_session_availability(session_id) --> Flag whether it is available or not.
+# End session using invitee_id, when session is joined by Cyberwater
+# end_session_now(38)

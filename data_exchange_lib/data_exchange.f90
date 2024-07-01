@@ -1,5 +1,5 @@
 module data_exchange
-  use iso_c_binding, only: c_char, c_double, C_NULL_CHAR
+  use iso_c_binding, only: c_char, c_double, C_NULL_CHAR, c_ptr, c_associated, c_f_pointer
   use http_interface
   implicit none
 
@@ -59,15 +59,53 @@ contains
 
   !===============================================================================
 
-  subroutine join_session()
-      use http_interface               
-      use iso_c_binding, only: c_int
-      implicit none
+!   subroutine join_session()
+!       use iso_c_binding, only: c_int
+!       implicit none
 
-      ! Call the C function to join a session
-      call join_session_c(trim(server_url)// C_NULL_CHAR, session_id, invitee_id)
+!       ! Call the C function to join a session
+!       call join_session_c(trim(server_url)// C_NULL_CHAR, session_id, invitee_id)
 
-  end subroutine join_session
+!   end subroutine join_session
+  !===============================================================================
+  subroutine join_session_with_retries(session_id, invitee_id, max_retries, sleep_time, join_status)
+    use iso_c_binding, only: c_int, c_char, c_null_char
+    implicit none
+    integer(c_int), intent(in) :: session_id(*)
+    integer(c_int), intent(in) :: invitee_id, max_retries, sleep_time
+    integer(c_int), intent(out) :: join_status
+    integer :: retries
+
+    ! Ensure the server_url is set
+    if (.not. server_url_set) then
+        print *, "Error: Server URL not set. Please set a valid server URL before attempting to join the session."
+        join_status = 0  ! Indicate failure
+        return
+    endif
+
+    join_status = 0  ! Default to failure
+    retries = 0
+
+    do while (retries < max_retries .and. join_status == 0)
+        ! Call the C function to attempt to join the session
+        join_status = join_session_c(trim(server_url)//c_null_char, session_id, invitee_id)
+
+        if (join_status == 1) then
+            print *, "Joined the session successfully."
+            return
+        else
+            print *, "Attempt to join failed, retrying..."
+            call sleep(sleep_time)  ! Assuming a sleep subroutine or intrinsic is available
+            retries = retries + 1
+        endif
+    end do
+
+    if (join_status == 0) then
+        print *, "Failed to join session after ", max_retries, " attempts."
+    endif
+  end subroutine join_session_with_retries
+
+
 
   !===============================================================================
 
@@ -101,8 +139,35 @@ contains
     ! Call the C binding to print all variable flags for the session
     call print_all_variable_flags(trim(server_url) // C_NULL_CHAR, session_ids)
   end subroutine check_specific_session_flags
+  
+  !===============================================================================
+  function check_specific_session_status(session_id) result(status_int)
+    use iso_c_binding, only: c_int, c_char, c_null_char
+    implicit none
+    integer(c_int), dimension(*), intent(in) :: session_id
+    integer(c_int) :: status_int
+
+    ! Ensure the server URL is set
+    if (.not. server_url_set) then
+        print *, "Error: Server URL not set."
+        status_int = -1  ! Indicate error
+        return
+    endif
+
+    ! Call the C function and get the status as an integer
+    status_int = get_specific_session_status(trim(server_url)//c_null_char, session_id)
+
+    if (status_int == 0) then
+        print *, "Failed to retrieve session status."
+    endif
+  end function check_specific_session_status
+
+
+
+
 
   !===============================================================================
+
 
   subroutine get_specific_variable_size(session_ids, var_id, var_size, status)
     integer, dimension(:), intent(in) :: session_ids
@@ -122,6 +187,38 @@ contains
     end if
   end subroutine get_specific_variable_size
 
+  !===============================================================================
+  integer function check_data_availability_with_retries(var_id, max_retries, sleep_time)
+      use http_interface
+      use iso_c_binding, only: c_int, c_double
+
+      implicit none
+      integer, intent(in) :: var_id, max_retries, sleep_time
+      integer :: retries, flag_status
+
+      check_data_availability_with_retries = 0      ! Default to not available
+      retries = 0
+
+      ! Check data availability with retries
+      do while (retries < max_retries)
+          flag_status = get_variable_flag(trim(server_url)//C_NULL_CHAR, session_id, var_id)
+          print *, "Checking data availability. Flag status:", flag_status
+          
+          if (flag_status == 1) then
+              print *, "Data is available for variable ID:", var_id
+              check_data_availability_with_retries = 1
+              exit
+          else
+              print *, "Data not available, retrying..."
+              retries = retries + 1
+              call sleep(sleep_time)
+          end if
+      end do
+
+      if (check_data_availability_with_retries == 0) then
+          print *, "Failed to confirm data availability for variable ID:", var_id, "after", max_retries, "attempts."
+      endif
+  end function check_data_availability_with_retries
 
   !===============================================================================
 
@@ -184,36 +281,20 @@ contains
       real(c_double), dimension(:), intent(inout) :: arr_receive
 
       ! Variable declarations
-      integer :: arr_length                                     ! Length of the array to receive
-      integer :: i                                              ! Loop variable
-      integer :: flag                                           ! Flag to check status
-      integer :: retries                                        ! Retry count allowed
+      integer :: retries                                        ! Retry count
       integer :: status_receive                                 ! Status of the receive operation
-      
-      retries = 0                                               ! Initialize retry counter
 
-      ! Determine the size of the data to be received and allocate memory
-      arr_length = get_variable_size(trim(server_url)// C_NULL_CHAR, session_id, var_receive)
+      retries = 0                                               ! Initialize retry counter
 
       ! Attempt to receive data with retries
       do while (retries < max_retries)
-          flag = get_variable_flag(trim(server_url)// C_NULL_CHAR, session_id, var_receive)
-          print *, "Flag status:", flag
+          status_receive = receive_data(trim(server_url)// C_NULL_CHAR, session_id, var_receive, arr_receive, size(arr_receive))
 
-          if (flag == 1) then
-              print *, "Flag set, attempting to receive data..."
-              status_receive = receive_data(trim(server_url)// C_NULL_CHAR, session_id, var_receive, arr_receive, arr_length)
-              if (status_receive == 1) then
-                  print *, "Data received successfully:"
-                  do i = 1, arr_length
-                      print *, "arr_receive(", i, ") = ", arr_receive(i)
-                  end do
-                  exit
-              else
-                  print *, "Failed to fetch data, retrying..."
-              end if
+          if (status_receive == 1) then
+              print *, "Data received successfully for variable ID:", var_receive
+              exit  ! Exit loop if data received successfully
           else
-              print *, "Flag not set for receiving, retrying..."
+              print *, "Failed to fetch data for variable ID:", var_receive, ", retrying..."
               retries = retries + 1
               call sleep(sleep_off_time)
           end if
@@ -221,10 +302,11 @@ contains
 
       ! Check if maximum retries have been exceeded
       if (retries >= max_retries) then
-          print *, "Failed to receive data for var_id:", var_receive, "after", max_retries, "attempts due to flag status."
+          print *, "Failed to receive data for var_id:", var_receive, "after", max_retries, "attempts."
       endif
 
   end subroutine recv_data_with_retries
+
 
   !===============================================================================
 

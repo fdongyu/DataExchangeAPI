@@ -2,7 +2,7 @@ import requests
 import struct
 import time 
 
-def create_session(server_url, source_model_ID, destination_model_ID, initiator_id, inviter_id,
+def create_session(server_url, source_model_ID, destination_model_ID, initiator_id, invitee_id,
                    input_variables_ID=None, input_variables_size=None,
                    output_variables_ID=None, output_variables_size=None):
     """
@@ -27,7 +27,7 @@ def create_session(server_url, source_model_ID, destination_model_ID, initiator_
         "source_model_ID": source_model_ID,
         "destination_model_ID": destination_model_ID,
         "initiator_id": initiator_id,
-        "inviter_id": inviter_id,
+        "invitee_id": invitee_id,
         "input_variables_ID": input_variables_ID or [],
         "input_variables_size": input_variables_size or [],
         "output_variables_ID": output_variables_ID or [],
@@ -46,6 +46,7 @@ def create_session(server_url, source_model_ID, destination_model_ID, initiator_
         print("Error occurred:", response.text)
         return {"error": response.text}
 
+
 def join_session_c(server_url, session_id, invitee_id):
     """
     Attempts to join a session with a given session ID and invitee ID.
@@ -54,13 +55,20 @@ def join_session_c(server_url, session_id, invitee_id):
         server_url (str): The server URL.
         session_id (str): The ID of the session to join.
         invitee_id (int): The invitee ID to authenticate the joining.
+        
+    Returns:
+        dict: A dictionary with 'success' status and 'error' message if applicable.
     """
     data = {"invitee_id": invitee_id, "session_id": session_id}
-    response = requests.post(f"{server_url}/join_session", json=data)
-    if response.ok:
-        print(f"Successfully joined session {session_id}")
-    else:
-        print("Error occurred while joining session:", response.text)
+    try:
+        response = requests.post(f"{server_url}/join_session", json=data)
+        if response.ok:
+            return {'success': True}
+        else:
+            return {'success': False, 'error': response.json().get('detail', 'Unknown error')}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
 
 
 def print_all_session_statuses(server_url):
@@ -96,14 +104,14 @@ def print_all_variable_flags(server_url, session_id):
 
 def get_specific_session_status(server_url, session_id):
     """
-    Client-side function to retrieve only the status of a session from the server.
-    
+    Client-side function to retrieve the status of a session from the server.
+
     Parameters:
         server_url (str): The base URL of the server.
         session_id (str): The ID of the session to check.
 
     Returns:
-        The status of the session as a string if successful, or None if an error occurs.
+        The status of the session as an integer if successful, or None if an error occurs.
     """
     # Construct the URL for the GET request
     url = f"{server_url}/get_session_status?session_id={session_id}"
@@ -114,8 +122,8 @@ def get_specific_session_status(server_url, session_id):
     # Check the response status
     if response.ok:
         # Extract the session status from the JSON response
-        session_info = response.json()
-        return session_info['status']
+        session_status = response.json()
+        return session_status
     else:
         # Optionally handle different error codes distinctly if needed
         print(f"Failed to retrieve session status. Server responded with: {response.status_code} - {response.text}")

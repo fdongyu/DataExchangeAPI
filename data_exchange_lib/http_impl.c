@@ -87,6 +87,7 @@ void create_session(const char* base_url, int source_model_ID, int destination_m
     curl_global_cleanup();
 }
 
+
 /**
  * Function to join a session by making a POST request to the server with session ID and invitee ID.
  * This function constructs a JSON payload that includes the session ID and the invitee ID.
@@ -95,8 +96,9 @@ void create_session(const char* base_url, int source_model_ID, int destination_m
  * @param base_url Base URL of the server
  * @param session_id Array containing session identifiers
  * @param invitee_id Invitee identifier, used to authenticate the user and manage session access permissions.
+ * @return int 1 if the operation was successful, 0 otherwise.
  */
-void join_session_c(const char* base_url, const int session_id[], int invitee_id) {
+int join_session_c(const char *base_url, const int session_id[], int invitee_id) {
     CURL *curl;
     CURLcode res;
     char postFields[1024];
@@ -104,7 +106,11 @@ void join_session_c(const char* base_url, const int session_id[], int invitee_id
     char session_id_str[256];
     char invitee_id_str[32];
 
+    // Construct the URL for the POST request
     snprintf(full_url, sizeof(full_url), "%s/join_session", base_url);
+    // printf("Constructed URL: %s\n", full_url);  // Debugging print
+
+    // Build the session_id string from the array
     strcpy(session_id_str, "");
     char temp[10];
     for (int i = 0; i < 5; ++i) {
@@ -113,29 +119,44 @@ void join_session_c(const char* base_url, const int session_id[], int invitee_id
         if (i < 4) strcat(session_id_str, ",");
     }
 
+    // Format the invitee_id into a string
     snprintf(invitee_id_str, sizeof(invitee_id_str), "%d", invitee_id);
-    snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"invitee_id\": %s}", session_id_str, invitee_id_str);
 
+    // Construct the JSON payload
+    snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"invitee_id\": %s}", session_id_str, invitee_id_str);
+    // printf("Constructed Payload: %s\n", postFields);  // Debugging print
+
+    // Initialize CURL
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
     if (curl) {
         struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
 
+        // Set the CURL options for the request
         curl_easy_setopt(curl, CURLOPT_URL, full_url);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields);
 
+        // Perform the CURL request
         res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
+        if (res == CURLE_OK) {
+            curl_easy_cleanup(curl);
+            curl_slist_free_all(headers);
+            curl_global_cleanup();
+            return 1;  // Success
+        } else {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
         }
 
+        // Cleanup CURL
         curl_easy_cleanup(curl);
         curl_slist_free_all(headers);
     }
     curl_global_cleanup();
+    return 0;  // Failure
 }
+
 
 
 /**
@@ -258,6 +279,81 @@ void print_all_variable_flags(const char* base_url, const int session_id[]) {
     }
     curl_global_cleanup();  // Perform global cleanup for CURL
 }
+
+#include <curl/curl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct memory {
+    char *response;
+    size_t size;
+};
+
+static size_t get_specific_session_status_callback(void *contents, size_t size, size_t nmemb, struct memory *mem) {
+    size_t real_size = size * nmemb;
+    char *ptr = realloc(mem->response, mem->size + real_size + 1);
+    if (!ptr) {
+        printf("Not enough memory\n");
+        return 0;
+    }
+    mem->response = ptr;
+    memcpy(&(mem->response[mem->size]), contents, real_size);
+    mem->size += real_size;
+    mem->response[mem->size] = '\0';  // Null-terminate the response
+    return real_size;
+}
+
+int get_specific_session_status(const char *base_url, const int session_id[]) {
+    CURL *curl;
+    CURLcode res;
+    char url[256];
+    struct memory chunk = {0};
+    char session_id_str[256];
+
+    // Build the session_id string from the array
+    strcpy(session_id_str, "");
+    char temp[10];
+    for (int i = 0; i < 5; ++i) {
+        snprintf(temp, sizeof(temp), "%d", session_id[i]);
+        strcat(session_id_str, temp);
+        if (i < 4) strcat(session_id_str, ",");
+    }
+
+    snprintf(url, sizeof(url), "%s/get_session_status?session_id=%s", base_url, session_id_str);
+
+    chunk.response = malloc(1);
+    chunk.size = 0;
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, get_specific_session_status_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        } else {
+            // Ensure the response is null-terminated
+            chunk.response[chunk.size] = '\0';
+            int status = atoi(chunk.response);  // Convert response to integer
+            free(chunk.response);
+            curl_easy_cleanup(curl);
+            return status;
+        }
+        curl_easy_cleanup(curl);
+    }
+    curl_global_cleanup();
+    free(chunk.response);
+    return 0;  // Return 0 if there was an error
+}
+
+
+
+
+
 
 /**
  * Callback function to extract the "flag_status" value from a JSON response.
