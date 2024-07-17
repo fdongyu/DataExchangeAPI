@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
 /**
  * Function to create a session on the server by making a POST request with JSON data.
  * @param base_url Base URL of the server
@@ -98,7 +96,7 @@ void create_session(const char* base_url, int source_model_ID, int destination_m
  * @param invitee_id Invitee identifier, used to authenticate the user and manage session access permissions.
  * @return int 1 if the operation was successful, 0 otherwise.
  */
-int join_session_c(const char *base_url, const int session_id[], int invitee_id) {
+int join_session(const char *base_url, const int session_id[], int invitee_id) {
     CURL *curl;
     CURLcode res;
     char postFields[1024];
@@ -280,11 +278,6 @@ void print_all_variable_flags(const char* base_url, const int session_id[]) {
     curl_global_cleanup();  // Perform global cleanup for CURL
 }
 
-#include <curl/curl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 struct memory {
     char *response;
     size_t size;
@@ -320,7 +313,7 @@ int get_specific_session_status(const char *base_url, const int session_id[]) {
         if (i < 4) strcat(session_id_str, ",");
     }
 
-    snprintf(url, sizeof(url), "%s/get_session_status?session_id=%s", base_url, session_id_str);
+    snprintf(url, sizeof(url), "%s/get_specific_session_status?session_id=%s", base_url, session_id_str);
 
     chunk.response = malloc(1);
     chunk.size = 0;
@@ -389,7 +382,7 @@ static size_t get_variable_flag_callback(void *contents, size_t size, size_t nme
  * @param var_id Variable ID whose flag status is to be retrieved.
  * @return The flag status as an integer (-1 on error, otherwise the actual flag status).
  */
-int get_variable_flag(const char* base_url, const int session_id[], int var_id) {
+int get_specific_variable_flag(const char* base_url, const int session_id[], int var_id) {
     CURL *curl;
     CURLcode res;
     char url[512];
@@ -400,7 +393,7 @@ int get_variable_flag(const char* base_url, const int session_id[], int var_id) 
     format_session_id_query(session_query, session_id);
 
     // Construct the full URL with the session ID and variable ID query parameters
-    snprintf(url, sizeof(url), "%s/get_variable_flag?%s&var_id=%d", base_url, session_query, var_id);
+    snprintf(url, sizeof(url), "%s/get_specific_variable_flag?%s&var_id=%d", base_url, session_query, var_id);
 
     // Initialize CURL
     curl = curl_easy_init();
@@ -451,7 +444,7 @@ size_t get_variable_size_callback(char* ptr, size_t size, size_t nmemb, void* us
  * @param var_id The variable ID whose size is to be fetched.
  * @return The size of the variable as an integer. Returns -1 if an error occurs or the size is not found.
  */
-int get_variable_size(const char* base_url, const int session_id[], int var_id) {
+int get_specific_variable_size(const char* base_url, const int session_id[], int var_id) {
     CURL *curl;
     CURLcode res;
     char full_url[2048];
@@ -462,7 +455,7 @@ int get_variable_size(const char* base_url, const int session_id[], int var_id) 
     format_session_id_query(session_query, session_id);
 
     // Construct the URL with the session_id query and variable ID as parameters
-    snprintf(full_url, sizeof(full_url), "%s/get_variable_size?%s&var_id=%d", base_url, session_query, var_id);
+    snprintf(full_url, sizeof(full_url), "%s/get_specific_variable_size?%s&var_id=%d", base_url, session_query, var_id);
 
     // Initialize CURL
     curl = curl_easy_init();
@@ -727,3 +720,5 @@ void end_session(const char* base_url, const int session_id[], int user_id) {
     }
     curl_global_cleanup();
 }
+
+// Unused/ Extra High level endpoints provided for interacting with the server

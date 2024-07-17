@@ -1,6 +1,7 @@
-from cyberwater_high_level import *
+from clients.cyberwater.lib.high_level_api import *
+
 # Usage of the module functions
-set_server_url("http://128.55.64.34:8000")
+set_server_url("http://128.55.64.48:8000")
 session_id = [2001,2005,35,38,1]
 set_session_id(session_id)
 session_data = SessionData(
@@ -16,7 +17,7 @@ session_data = SessionData(
 start_session(session_data)
 
 # # Check the session status first
-# session_status = check_specific_session_status(session_id)
+# session_status = retrieve_specific_session_status(session_id)
 
 # if session_status is None:
 #     print("Failed to get session status.")
@@ -44,7 +45,7 @@ time.sleep(10)
 
 flag_status = check_data_availability_with_retries(var_id=4, max_retries=5, sleep_time=5)
 if flag_status == 1:
-    arr_receive = recv_data_with_retries(var_receive = 4, max_retries = 5, sleep_time =5)
+    arr_receive = receive_data_with_retries(var_receive = 4, max_retries = 5, sleep_time =5)
     if arr_receive:
         print("Data Received Sucessfully")
     else:

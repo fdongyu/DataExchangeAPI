@@ -1,6 +1,6 @@
 program e3sm_test
-    use data_exchange
-    use http_interface
+    use high_level_api
+    use low_level_fortran_api
     use iso_c_binding, only: c_int, c_double, c_null_char
     implicit none
     type(session_data) :: sd
@@ -14,7 +14,7 @@ program e3sm_test
     integer(c_int) :: session_status
 
     ! Set the server URL at runtime
-    call set_server_url("http://128.55.64.34:8000")
+    call set_server_url("http://128.55.64.48:8000")
 
     ! User sets values directly
     sd%source_model_ID = 2001
@@ -38,10 +38,10 @@ program e3sm_test
 
     ! Join the session
     ! Check the session status first
-    session_status = check_specific_session_status(id)
+    session_status = retrieve_specific_session_status(id)
     if (session_status == 1) then
         print *, "Session status is 'created'"
-        call join_session_with_retries(id, sd%invitee_id, 5, 5, join_status)
+        join_status = join_session_with_retries(id, sd%invitee_id, 5, 5)
         if (join_status == 0) then
             print *, "Not able to join properly."
         else if (join_status == 1) then
@@ -70,12 +70,14 @@ program e3sm_test
     receive_var_id = 1
     if (check_data_availability_with_retries(receive_var_id, 5, 5) == 1) then
         ! Proceed with data retrieval
-        call get_specific_variable_size(id, receive_var_id, receive_var_size, receive_status)
-        if (receive_status == 0) then
+        receive_var_size = retrieve_specific_variable_size(id, receive_var_id)
+        
+        if (receive_var_size > 0) then
             print *, "Variable size for ID", receive_var_id, "is", receive_var_size
             ! Allocate the receive array
             allocate(arr_receive(receive_var_size))
-            call recv_data_with_retries(receive_var_id, arr_receive, 5, 5)
+            
+            call receive_data_with_retries(receive_var_id, arr_receive, 5, 5)
             
             ! Print received data
             print *, "Received data:"
