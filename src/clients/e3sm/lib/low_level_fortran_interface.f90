@@ -1,4 +1,4 @@
-module low_level_fortran_api
+module low_level_fortran_interface
     use, intrinsic :: iso_c_binding, only: c_int, c_char, c_double, c_ptr
     implicit none
 
@@ -90,7 +90,7 @@ module low_level_fortran_api
 
     end interface
 
-end module low_level_fortran_api
+end module low_level_fortran_interface
 
 !Unused/ Extra High level endpoints provided for interacting with the server
         ! ! Retrieves and print the status of all sessions from the server

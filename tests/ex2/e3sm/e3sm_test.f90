@@ -14,7 +14,7 @@ program e3sm_test
     integer(c_int) :: session_status
 
     ! Set the server URL at runtime
-    call set_server_url("http://128.55.64.48:8000")
+    call set_server_url("http://128.55.64.26:8000")
 
     ! User sets values directly
     sd%source_model_ID = 2001

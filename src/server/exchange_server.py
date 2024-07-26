@@ -31,28 +31,27 @@ session_lock = threading.Lock()
 
 @app.on_event("startup")
 async def startup_event():
-    """ Task to print sessions periodically after server startup """
-    app.state.print_sessions_task = asyncio.create_task(print_sessions_every_10_seconds())
+    """ Start background tasks at server startup """
+    app.state.print_sessions_task = asyncio.create_task(print_sessions_every_n_seconds(n=10))
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """ Cancel the periodic print task on server shutdown """
-    task = app.state.print_sessions_task
-    task.cancel()
+    app.state.print_sessions_task.cancel()
     try:
-        await task
+        await app.state.print_sessions_task
     except asyncio.CancelledError:
-        pass
+        print("Background task was cancelled")
 
-async def print_sessions_every_10_seconds():
-    """ Periodically print the current sessions and their flags every 10 seconds """
+async def print_sessions_every_n_seconds(n=10):
+    """ Periodically print the current sessions and their flags every `n` seconds """
     while True:
         with session_lock:
             print("Current Sessions and Flags:")
             for session_id, session_info in sessions.items():
                 flags = session_info['flags']
                 print(f"Session ID: {session_id}, Flags: {flags}")
-        await asyncio.sleep(10)
+        await asyncio.sleep(n)
 
 @app.post("/create_session")
 async def create_session(session_data: SessionData):
@@ -99,9 +98,9 @@ async def get_specific_session_status(session_id: str):
 
         # Map statuses to integers
         status_mapping = {
-            "created": 1,
-            "active": 2,
-            "partial end": 3
+            "created": 1, # Session is created, when one client has created the session
+            "active": 2, # Session is active, when both the clients has joined coupling
+            "partial end": 3 # Session is partial end, when one client has ended the session
         }
 
         # Return the status of the session
@@ -231,10 +230,15 @@ async def end_session(data: EndSessionData):
             return {"status": "Session ended successfully", "session_id": session_id}
         
 if __name__ == '__main__':
-    # Start the server with Uvicorn
-    loop = asyncio.get_event_loop()
-    loop.create_task(print_sessions_every_10_seconds())
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    def main():
+        # Task to print sessions periodically
+        loop = asyncio.get_event_loop()
+        loop.create_task(print_sessions_every_n_seconds())
+        
+        # Start the server with Uvicorn
+        uvicorn.run(app, host='0.0.0.0', port=8000)
+
+    main()
 
 
 # Unused/ Extra High level endpoints provided for interacting with the server

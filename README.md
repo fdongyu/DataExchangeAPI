@@ -114,3 +114,15 @@ Both clients will interact with the data exchange server, which handles sessions
 - `/send_data`: Sends binary data for a specific variable.
 - `/receive_data`: Receives binary data for a specific variable.
 - `/end_session`: Ends a session.
+
+## Libraries and their usage
+
+- **FastAPI**: Used to create and handle the web server and API endpoints.
+- **HTTPException, Request, Response, Header**: FastAPI dependencies for managing HTTP specifics.
+- **Pydantic**: Utilized for data validation through BaseModel.
+- **List, Optional**: Typing modules for specifying type hints.
+- **uvicorn**: ASGI server for running FastAPI.
+- **struct**: Module for handling binary data through packing and unpacking.
+- **threading**: Provides support for concurrent operations.
+- **asyncio**: Manages asynchronous operations.
+- **warnings**: Used to control warning messages.

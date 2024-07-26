@@ -21,7 +21,7 @@ Make sure the server is running and listening on the default port `8000` or adju
 Before running the E3SM client, ensure that it is compiled:
 
 ```bash
-cd ~/Final_Data_Exchange_Service_Code1/tests/single_iteration/e3sm
+cd ~/Final_Data_Exchange_Service_Code1/tests/ex1/e3sm
 make clean
 make
 ```
@@ -44,6 +44,6 @@ export PYTHONPATH=~/Final_Data_Exchange_Service_Code1/src:$PYTHONPATH
 Navigate to the Cyberwater test directory and execute the Python script:
 
 ```bash
-cd ~/Final_Data_Exchange_Service_Code1/tests/single_iteration/cyberwater
+cd ~/Final_Data_Exchange_Service_Code1/tests/ex1/cyberwater
 python cyberwater_test.py
 ```

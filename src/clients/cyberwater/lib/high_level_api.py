@@ -127,29 +127,30 @@ def receive_data_with_retries(var_receive, max_retries, sleep_time):
     Continuously attempts to receive data until successful or until the maximum number of retries is reached.
 
     Parameters:
-        server_url (str): The server URL.
-        session_id (str): The session ID.
         var_receive (int): The variable ID for which data is expected.
         max_retries (int): Maximum number of attempts to fetch the data.
         sleep_time (int): Seconds to wait between retries.
     
     Returns:
-        list of float: The received data array, or None if failed to receive after all retries.
+        tuple:
+            int: Status code (1 for success, 0 for failure)
+            list of float or None: The received data array if successful, otherwise None.
     """
     retries = 0
+    status_receive = 0  # Initialize status as 0 (failure)
     while retries < max_retries:
         data_array = receive_data(SERVER_URL, SESSION_ID, var_receive)
         if data_array is not None:
+            status_receive = 1  # Set status to 1 (success)
             print("Data received successfully.")
-            return data_array
+            return (status_receive, data_array)
         else:
             print("Failed to fetch data, retrying...")
             time.sleep(sleep_time)
             retries += 1
 
     print(f"Failed to receive data for var_id {var_receive} after {max_retries} attempts.")
-    return None
-
+    return (status_receive, None)  # Return the final status (still 0) and None for the data
 
 def end_session_now(user_id: int):
     if not SERVER_URL_SET:

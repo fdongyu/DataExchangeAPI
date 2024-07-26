@@ -1,6 +1,6 @@
 module high_level_api
   use iso_c_binding, only: c_char, c_double, C_NULL_CHAR, c_ptr, c_associated, c_f_pointer
-  use low_level_fortran_api
+  use low_level_fortran_interface
   implicit none
 
   character(len=256) :: server_url = ""  ! Dynamic server URL
@@ -120,7 +120,7 @@ contains
   !===============================================================================
 
   function send_data_with_retries(var_send, arr_send, max_retries, sleep_time) result(status_send)
-      use low_level_fortran_api       
+      use low_level_fortran_interface    
       use iso_c_binding, only: c_double 
       implicit none
 
@@ -168,38 +168,39 @@ contains
   end function send_data_with_retries
 
   !===============================================================================
-  integer function check_data_availability_with_retries(var_id, max_retries, sleep_time)
-      use low_level_fortran_api
-      use iso_c_binding, only: c_int, c_double
+  function check_data_availability_with_retries(var_id, max_retries, sleep_time) result(status_available)
+      use low_level_fortran_interface
+      use iso_c_binding, only: c_double, c_int
 
       implicit none
       integer, intent(in) :: var_id, max_retries, sleep_time
       integer :: retries, flag_status
+      integer :: status_available
 
-      check_data_availability_with_retries = 0      ! Default to not available
-      retries = 0
+      status_available = 0                                  ! Initialize status_available to 0 (not available)
+      retries = 0                                           ! Initialize retry counter
 
-      ! Check data availability with retries
+      ! Attempt to check data availability with retries
       do while (retries < max_retries)
-          flag_status = get_specific_variable_flag(trim(server_url)//C_NULL_CHAR, session_id, var_id)
+          flag_status = get_specific_variable_flag(trim(server_url)// C_NULL_CHAR, session_id, var_id)
           print *, "Checking data availability. Flag status:", flag_status
           
           if (flag_status == 1) then
               print *, "Data is available for variable ID:", var_id
-              check_data_availability_with_retries = 1
-              exit
+              status_available = 1                          ! Set status_available to 1 (available)
+              return
           else
               print *, "Data not available, retrying..."
               retries = retries + 1
-              call sleep(sleep_time)
-          end if
+          endif
+          call sleep(sleep_time)                            ! Wait before next retry
       end do
 
-      if (check_data_availability_with_retries == 0) then
+      ! Check if maximum retries have been exceeded
+      if (retries >= max_retries) then
           print *, "Failed to confirm data availability for variable ID:", var_id, "after", max_retries, "attempts."
       endif
   end function check_data_availability_with_retries
-
   !===============================================================================
   function retrieve_specific_variable_size(session_ids, var_id) result(var_size)
     integer, dimension(:), intent(in) :: session_ids
@@ -225,8 +226,8 @@ contains
   end function retrieve_specific_variable_size
   !===============================================================================
 
-  subroutine receive_data_with_retries(var_receive, arr_receive, max_retries, sleep_off_time)
-      use low_level_fortran_api           
+  function receive_data_with_retries(var_receive, arr_receive, max_retries, sleep_off_time) result(status_receive)
+      use low_level_fortran_interface      
       use iso_c_binding, only: c_double  
       implicit none
 
@@ -238,6 +239,7 @@ contains
       integer :: status_receive                                 ! Status of the receive operation
 
       retries = 0                                               ! Initialize retry counter
+      status_receive = 0                                        ! Initialize receive status to 0 (failure)
 
       ! Attempt to receive data with retries
       do while (retries < max_retries)
@@ -245,7 +247,7 @@ contains
 
           if (status_receive == 1) then
               print *, "Data received successfully for variable ID:", var_receive
-              exit  ! Exit loop if data received successfully
+              return  ! Exit function returning status_receive as 1 (success)
           else
               print *, "Failed to fetch data for variable ID:", var_receive, ", retrying..."
               retries = retries + 1
@@ -258,18 +260,17 @@ contains
           print *, "Failed to receive data for var_id:", var_receive, "after", max_retries, "attempts."
       endif
 
-  end subroutine receive_data_with_retries
-
+      ! The function will return status_receive which will be 0 if all retries failed
+  end function receive_data_with_retries
 
   !===============================================================================
 
   subroutine end_session_now(user_id)
-      use low_level_fortran_api                  ! Include module for HTTP interface methods
+      use low_level_fortran_interface     ! Include module for HTTP interface methods
       use iso_c_binding, only: c_int      ! Use ISO C binding to ensure compatibility with C types
       implicit none
 
       integer(c_int), intent(in) :: user_id
-
 
       ! End the session with the server
       call end_session(trim(server_url)// C_NULL_CHAR, session_id, user_id)
