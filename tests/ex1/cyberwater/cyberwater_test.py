@@ -1,7 +1,13 @@
 from clients.cyberwater.lib.high_level_api import *
 
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+
+# Disable the warning
+urllib3.disable_warnings(InsecureRequestWarning)
+
 # Usage of the module functions
-set_server_url("http://128.55.64.33:8000")
+set_server_url("https://149.165.154.129:443")
 session_id = [2001,2005,35,38,1]
 set_session_id(session_id)
 session_data = SessionData(

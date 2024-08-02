@@ -140,6 +140,13 @@ async def send_data(request: Request, session_id: Optional[str] = Header(None), 
         raise HTTPException(status_code=400, detail="Session-ID or Var-ID header missing")
 
     binary_data = await request.body()
+    # `binary_data` is a bytes object that contains packed binary data, 
+    # and `data` is a list or tuple of floating-point numbers to be packed into binary format.
+
+    # Unpacking binary data into a list of doubles (double-precision floating points):
+    # 1. '<' indicates little-endian byte order.
+    # 2. 'd' represents a double in C (8 bytes).
+    # 3. 'len(binary_data) // 8' calculates how many doubles are packed in `binary_data`.
     array_data = list(struct.unpack('<' + 'd' * (len(binary_data) // 8), binary_data))
 
     with session_lock:

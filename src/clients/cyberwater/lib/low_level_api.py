@@ -1,6 +1,10 @@
 import requests
 import struct
 import time 
+import os
+import ssl
+
+cert_path = "/global/homes/a/amlodha/Final_Data_Exchange_Service_Code1/src/clients/cyberwater/lib/ssl-cert-snakeoil.pem"
 
 def create_session(server_url, source_model_ID, destination_model_ID, initiator_id, invitee_id,
                    input_variables_ID=None, input_variables_size=None,
@@ -34,8 +38,9 @@ def create_session(server_url, source_model_ID, destination_model_ID, initiator_
         "output_variables_size": output_variables_size or []
     }
 
+
     # Send POST request to the server
-    response = requests.post(f"{server_url}/create_session", json=data)
+    response = requests.post(f"{server_url}/create_session", json=data, verify=False)
     
     # Check response status
     if response.ok:
@@ -61,7 +66,7 @@ def get_specific_session_status(server_url, session_id):
     url = f"{server_url}/get_specific_session_status?session_id={session_id}"
     
     # Send the GET request to the server
-    response = requests.get(url)
+    response = requests.get(url, verify=False)
     
     # Check the response status
     if response.ok:
@@ -86,8 +91,9 @@ def join_session(server_url, session_id, invitee_id):
         dict: A dictionary with 'success' status and 'error' message if applicable.
     """
     data = {"invitee_id": invitee_id, "session_id": session_id}
+
     try:
-        response = requests.post(f"{server_url}/join_session", json=data)
+        response = requests.post(f"{server_url}/join_session", json=data, verify=False)
         if response.ok:
             return {'success': True}
         else:
@@ -118,7 +124,7 @@ def send_data(server_url, session_id, var_id, data):
     }
 
     # Send the binary data as a POST request to the server
-    response = requests.post(f"{server_url}/send_data", data=binary_data, headers=headers)
+    response = requests.post(f"{server_url}/send_data", data=binary_data, headers=headers, verify=False)
     
     return response
 
@@ -140,7 +146,7 @@ def get_specific_variable_flag(server_url, session_id, var_id):
     params = {'session_id': session_id, 'var_id': var_id}
 
     # Perform the GET request
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, verify=False)
 
     # Check if the request was successful
     if response.ok:
@@ -168,7 +174,8 @@ def receive_data(server_url, session_id, var_id):
         list of float: The unpacked data array of double precision floats, or None if an error occurred.
     """
     params = {"session_id": session_id, "var_id": var_id}
-    response = requests.get(f"{server_url}/receive_data", params=params)
+
+    response = requests.get(f"{server_url}/receive_data", params=params, verify=False)
 
     if response.ok:
         binary_data = response.content
@@ -198,7 +205,7 @@ def end_session(server_url, session_id, user_id):
     }
 
     # Send the POST request to end the session
-    response = requests.post(f"{server_url}/end_session", json=data)
+    response = requests.post(f"{server_url}/end_session", json=data, verify=False)
 
     # Check if the request was successful
     if response.ok:
