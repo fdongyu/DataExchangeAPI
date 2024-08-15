@@ -51,7 +51,7 @@ def create_session(server_url, source_model_ID, destination_model_ID, initiator_
         print("Error occurred:", response.text)
         return {"error": response.text}
 
-def get_specific_session_status(server_url, session_id):
+def get_session_status(server_url, session_id):
     """
     Client-side function to retrieve the status of a session from the server.
 
@@ -63,7 +63,7 @@ def get_specific_session_status(server_url, session_id):
         The status of the session as an integer if successful, or None if an error occurs.
     """
     # Construct the URL for the GET request
-    url = f"{server_url}/get_specific_session_status?session_id={session_id}"
+    url = f"{server_url}/get_session_status?session_id={session_id}"
     
     # Send the GET request to the server
     response = requests.get(url, verify=False)
@@ -100,6 +100,34 @@ def join_session(server_url, session_id, invitee_id):
             return {'success': False, 'error': response.json().get('detail', 'Unknown error')}
     except Exception as e:
         return {'success': False, 'error': str(e)}
+
+def get_variable_size(server_url, session_id, var_id):
+    """
+    Retrieves the size of a specific variable within a session from the server.
+
+    Parameters:
+        server_url (str): The server URL.
+        session_id (str): The ID of the session.
+        var_id (int): The ID of the variable.
+
+    Returns:
+        int: The size of the variable if the request is successful, -1 otherwise.
+    """
+    # Construct the URL and set parameters for the GET request
+    url = f"{server_url}/get_variable_size"
+    params = {'session_id': session_id, 'var_id': var_id}
+
+    # Perform the GET request
+    response = requests.get(url, params=params)
+    if response.ok:
+        # Parse and return the size from the JSON response
+        size_info = response.json()
+        print(f"Size of variable {var_id} in session {session_id}: {size_info.get('size', 'Unknown')}")
+        return size_info.get('size', -1)
+    else:
+        # Log and return -1 if there was an error during the request
+        print("Error occurred while retrieving variable size:", response.text)
+        return -1
     
 def send_data(server_url, session_id, var_id, data):
     """
@@ -129,7 +157,7 @@ def send_data(server_url, session_id, var_id, data):
     return response
 
 
-def get_specific_variable_flag(server_url, session_id, var_id):
+def get_variable_flag(server_url, session_id, var_id):
     """
     Retrieves the flag status for a specific variable within a session.
 
@@ -142,7 +170,7 @@ def get_specific_variable_flag(server_url, session_id, var_id):
         int: The flag status if the request is successful, None otherwise.
     """
     # Construct the URL and set parameters for the GET request
-    url = f"{server_url}/get_specific_variable_flag"
+    url = f"{server_url}/get_variable_flag"
     params = {'session_id': session_id, 'var_id': var_id}
 
     # Perform the GET request
@@ -214,66 +242,3 @@ def end_session(server_url, session_id, user_id):
     else:
         # Print an error message if the request failed
         print("Error ending session:", response.text)
-
-
-# Unused/ Extra High level endpoints provided for interacting with the server
-
-
-# def print_all_session_statuses(server_url):
-#     """
-#     Retrieves and prints the status of all sessions from the server.
-
-#     Parameters:
-#         server_url (str): The server URL.
-#     """
-#     response = requests.get(f"{server_url}/print_all_session_statuses")
-#     if response.ok:
-#         sessions = response.json()
-#         print("Session statuses:")
-#         for session_id, status in sessions.items():
-#             print(f"Session ID: {session_id}, Status: {status}")
-#     else:
-#         print(f"Error occurred while retrieving session statuses: {response.text}")
-
-# def print_all_variable_flags(server_url, session_id):
-#     """
-#     Fetches and prints flags for a given session ID from the server.
-    
-#     Parameters:
-#         server_url (str): The server URL.
-#         session_id (str): The ID of the session.
-#     """
-#     response = requests.get(f"{server_url}/print_all_variable_flags", params={"session_id": session_id})
-#     if response.ok:
-#         flags = response.json()
-#         print(f"Flags for session {session_id}: {flags}")
-#     else:
-#         print("Error occurred while retrieving flags:", response.text)
-
-# def get_variable_size(server_url, session_id, var_id):
-#     """
-#     Retrieves the size of a specific variable within a session from the server.
-
-#     Parameters:
-#         server_url (str): The server URL.
-#         session_id (str): The ID of the session.
-#         var_id (int): The ID of the variable.
-
-#     Returns:
-#         int: The size of the variable if the request is successful, -1 otherwise.
-#     """
-#     # Construct the URL and set parameters for the GET request
-#     url = f"{server_url}/get_variable_size"
-#     params = {'session_id': session_id, 'var_id': var_id}
-
-#     # Perform the GET request
-#     response = requests.get(url, params=params)
-#     if response.ok:
-#         # Parse and return the size from the JSON response
-#         size_info = response.json()
-#         print(f"Size of variable {var_id} in session {session_id}: {size_info.get('size', 'Unknown')}")
-#         return size_info.get('size', -1)
-#     else:
-#         # Log and return -1 if there was an error during the request
-#         print("Error occurred while retrieving variable size:", response.text)
-#         return -1

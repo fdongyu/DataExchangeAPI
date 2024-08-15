@@ -27,7 +27,7 @@ contains
   !===============================================================================
   subroutine set_server_url(url)
     character(len=*), intent(in) :: url
-    if (len(trim(url)) > 0) then
+    if (len(trim(url)) > 0 .and. len(trim(url)) <= 256) then
       server_url = trim(url)
       server_url_set = .true.
     else
@@ -58,7 +58,7 @@ contains
   end subroutine start_session
 
   !===============================================================================
-  function retrieve_specific_session_status(session_id) result(status_int)
+  function retrieve_session_status(session_id) result(status_int)
     use iso_c_binding, only: c_int, c_char, c_null_char
     implicit none
     integer(c_int), dimension(*), intent(in) :: session_id
@@ -67,24 +67,24 @@ contains
     ! Ensure the server URL is set
     if (.not. server_url_set) then
         print *, "Error: Server URL not set."
-        status_int = -1  ! Indicate error
+        status_int = 0  ! Indicate error
         return
     endif
 
-    ! Call the C function and get the status as an integer
-    status_int = get_specific_session_status(trim(server_url)//c_null_char, session_id)
+    ! Call the low-level API function and get the status as an integer
+    status_int = get_session_status(trim(server_url)//c_null_char, session_id)
 
     if (status_int == 0) then
         print *, "Failed to retrieve session status."
     endif
-  end function retrieve_specific_session_status
+  end function retrieve_session_status
 
   !===============================================================================
-  function join_session_with_retries(session_id, invitee_id, max_retries, sleep_time) result(join_status)
+  function join_session_with_retries(session_id, invitee_id, max_retries, retry_delay) result(join_status)
     use iso_c_binding, only: c_int, c_char, c_null_char
     implicit none
     integer(c_int), intent(in) :: session_id(*)
-    integer(c_int), intent(in) :: invitee_id, max_retries, sleep_time
+    integer(c_int), intent(in) :: invitee_id, max_retries, retry_delay
     integer(c_int) :: join_status
     integer :: retries
 
@@ -99,7 +99,7 @@ contains
     retries = 0
 
     do while (retries < max_retries .and. join_status == 0)
-        ! Call the C function to attempt to join the session
+        ! Call the low-level API function to attempt to join the session
         join_status = join_session(trim(server_url)//c_null_char, session_id, invitee_id)
 
         if (join_status == 1) then
@@ -107,7 +107,7 @@ contains
             return  ! Exit as soon as the session is joined successfully
         else
             print *, "Attempt to join failed, retrying..."
-            call sleep(sleep_time)  ! Assuming a sleep subroutine or intrinsic is available
+            call sleep(retry_delay)  ! Assuming a sleep subroutine or intrinsic is available
             retries = retries + 1
         endif
     end do
@@ -119,12 +119,12 @@ contains
 
   !===============================================================================
 
-  function send_data_with_retries(var_send, arr_send, max_retries, sleep_time) result(status_send)
+  function send_data_with_retries(var_send, arr_send, max_retries, retry_delay) result(status_send)
       use low_level_fortran_interface    
       use iso_c_binding, only: c_double 
       implicit none
 
-      integer, intent(in) :: var_send, max_retries, sleep_time
+      integer, intent(in) :: var_send, max_retries, retry_delay
       real(c_double), dimension(:), intent(in) :: arr_send
 
       ! Variable declarations
@@ -138,11 +138,11 @@ contains
       retries = 0                                           ! Initialize retry counter
 
       ! Prepare data array
-      arr_length = get_specific_variable_size(trim(server_url)// C_NULL_CHAR, session_id, var_send)
+      arr_length = get_variable_size(trim(server_url)// C_NULL_CHAR, session_id, var_send)
 
       ! Attempt to send data with retries
       do while (retries < max_retries)
-          flag = get_specific_variable_flag(trim(server_url)// C_NULL_CHAR, session_id, var_send)
+          flag = get_variable_flag(trim(server_url)// C_NULL_CHAR, session_id, var_send)
           print *, "Flag status:", flag
 
           if (flag == 0) then
@@ -155,10 +155,10 @@ contains
                   retries = retries + 1
               end if
           else
-              print *, "Flag is not set for sending, retrying..."
+              print *, "Flag for the variable you are sending is on, so wait for the other client to receive it"
               retries = retries + 1
           endif
-          call sleep(sleep_time)
+          call sleep(retry_delay)
       end do
 
       ! Check if maximum retries have been exceeded
@@ -168,12 +168,12 @@ contains
   end function send_data_with_retries
 
   !===============================================================================
-  function check_data_availability_with_retries(var_id, max_retries, sleep_time) result(status_available)
+  function check_data_availability_with_retries(var_id, max_retries, retry_delay) result(status_available)
       use low_level_fortran_interface
       use iso_c_binding, only: c_double, c_int
 
       implicit none
-      integer, intent(in) :: var_id, max_retries, sleep_time
+      integer, intent(in) :: var_id, max_retries, retry_delay
       integer :: retries, flag_status
       integer :: status_available
 
@@ -182,7 +182,7 @@ contains
 
       ! Attempt to check data availability with retries
       do while (retries < max_retries)
-          flag_status = get_specific_variable_flag(trim(server_url)// C_NULL_CHAR, session_id, var_id)
+          flag_status = get_variable_flag(trim(server_url)// C_NULL_CHAR, session_id, var_id)
           print *, "Checking data availability. Flag status:", flag_status
           
           if (flag_status == 1) then
@@ -193,7 +193,7 @@ contains
               print *, "Data not available, retrying..."
               retries = retries + 1
           endif
-          call sleep(sleep_time)                            ! Wait before next retry
+          call sleep(retry_delay)                            ! Wait before next retry
       end do
 
       ! Check if maximum retries have been exceeded
@@ -202,28 +202,20 @@ contains
       endif
   end function check_data_availability_with_retries
   !===============================================================================
-  function retrieve_specific_variable_size(session_ids, var_id) result(var_size)
+  function retrieve_variable_size(session_ids, var_id) result(var_size)
     integer, dimension(:), intent(in) :: session_ids
     integer, intent(in) :: var_id
     integer :: var_size
-    integer :: status  ! Internal status variable
 
     ! Call the low-level API function to get the size
-    var_size = get_specific_variable_size(trim(server_url)//C_NULL_CHAR, session_ids, var_id)
+    var_size = get_variable_size(trim(server_url)//C_NULL_CHAR, session_ids, var_id)
 
     ! Status checking after API call
-    if (var_size < 0) then
-      print *, "Error: Unable to get variable size for ID", var_id
-      status = -1  ! Indicating an error
-    else
-      status = 0   ! Indicating success
+    if (var_size <= 0) then
+        print *, "Error: Unable to get variable size for ID", var_id
+        var_size = 0  ! Ensure var_size is not negative
     end if
-
-    ! Optionally, modify the function to return -1 in case of an error
-    if (status == -1) then
-      var_size = -1  ! Reset var_size to indicate error clearly to the caller
-    end if
-  end function retrieve_specific_variable_size
+  end function retrieve_variable_size
   !===============================================================================
 
   function receive_data_with_retries(var_receive, arr_receive, max_retries, sleep_off_time) result(status_receive)
@@ -280,46 +272,4 @@ contains
   !===============================================================================
 
 end module high_level_api
-
-!Unused/ Extra High level endpoints provided for interacting with the server
-!   subroutine join_session()
-!       use iso_c_binding, only: c_int
-!       implicit none
-
-!       ! Call the C function to join a session
-!       call join_session_c(trim(server_url)// C_NULL_CHAR, session_id, invitee_id)
-
-!   end subroutine join_session
-
-! subroutine check_session_availability()
-!   ! Checks the availability of sessions and prints their statuses
-!   if (.not. server_url_set) then
-!       print *, "Error: Server URL not set. Please set a valid server URL before checking session statuses."
-!       return
-!   endif
-
-!   ! Call the C binding to print all session statuses
-!   call print_all_session_statuses(trim(server_url) // C_NULL_CHAR)
-! end subroutine check_session_availability
-
-! !===============================================================================
-
-! subroutine check_specific_session_flags(session_ids)
-!   integer, dimension(:), intent(in) :: session_ids
-!   ! Checks and prints the flag status for the variables of a specific session
-!   if (.not. server_url_set) then
-!       print *, "Error: Server URL not set. Please set a valid server URL before checking variable flags."
-!       return
-!   endif
-
-!   ! Ensure session IDs are passed correctly
-!   if (size(session_ids) /= 5) then
-!       print *, "Error: Invalid session ID array size."
-!       return
-!   endif
-
-!   ! Call the C binding to print all variable flags for the session
-!   call print_all_variable_flags(trim(server_url) // C_NULL_CHAR, session_ids)
-! end subroutine check_specific_session_flags
-! !===============================================================================
 

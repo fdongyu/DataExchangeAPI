@@ -80,8 +80,8 @@ async def create_session(session_data: SessionData):
         
         return {"status": "created", "session_id": session_id}
     
-@app.get("/get_specific_session_status")
-async def get_specific_session_status(session_id: str):
+@app.get("/get_session_status")
+async def get_session_status(session_id: str):
     """
     Retrieves the status of a specific session.
 
@@ -158,8 +158,8 @@ async def send_data(request: Request, session_id: Optional[str] = Header(None), 
             raise HTTPException(status_code=404, detail="Session or variable not found")
 
 
-@app.get("/get_specific_variable_flag")
-async def get_specific_variable_flag(session_id: str, var_id: int):
+@app.get("/get_variable_flag")
+async def get_variable_flag(session_id: str, var_id: int):
     """
     Get the flag status for a specific variable in the session.
     """
@@ -170,8 +170,8 @@ async def get_specific_variable_flag(session_id: str, var_id: int):
         else:
             raise HTTPException(status_code=404, detail="Session or variable not found")
         
-@app.get("/get_specific_variable_size")
-async def get_specific_variable_size(session_id: str, var_id: int):
+@app.get("/get_variable_size")
+async def get_variable_size(session_id: str, var_id: int):
     """
     Retrieve the size of a specific variable in the session.
     """

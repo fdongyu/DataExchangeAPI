@@ -15,7 +15,7 @@ program e3sm_test
     integer(c_int) :: session_status
 
     ! Set the server URL at runtime
-    call set_server_url("https://149.165.154.115")
+    call set_server_url("http://128.55.64.40:8000")
 
     ! User sets values directly
     sd%source_model_ID = 2001
@@ -33,7 +33,7 @@ program e3sm_test
 
     ! Join the session
     ! Check the session status first
-    session_status = retrieve_specific_session_status(id)
+    session_status = retrieve_session_status(id)
     if (session_status == 1) then
         print *, "Session status is 'created'"
         join_status = join_session_with_retries(id, sd%invitee_id, 5, 5)
@@ -61,7 +61,7 @@ program e3sm_test
     receive_var_id = 1
     if (check_data_availability_with_retries(receive_var_id, 5, 5) == 1) then
         ! Proceed with data retrieval
-        receive_var_size = retrieve_specific_variable_size(id, receive_var_id)
+        receive_var_size = retrieve_variable_size(id, receive_var_id)
         
         if (receive_var_size > 0) then
             print *, "Variable size for ID", receive_var_id, "is", receive_var_size

@@ -56,15 +56,15 @@ def start_session(sd: SessionData):
                 sd.initiator_id, sd.invitee_id, sd.input_variables_id, sd.input_variables_size,
                 sd.output_variables_id, sd.output_variables_size)
 
-def retrieve_specific_session_status(session_id):
+def retrieve_session_status(session_id):
     if not SERVER_URL_SET:
         print("Error: Server URL not set. Please set a valid server URL before joining a session.")
         return
     
     session_id = ','.join(map(str, session_id))
-    return(get_specific_session_status(SERVER_URL, session_id))
+    return(get_session_status(SERVER_URL, session_id))
 
-def join_session_with_retries(session_id, invitee_id, max_retries, sleep_time):
+def join_session_with_retries(session_id, invitee_id, max_retries, retry_delay):
     retries = 0
     session_id = ','.join(map(str, session_id))
     while retries < max_retries:
@@ -76,14 +76,14 @@ def join_session_with_retries(session_id, invitee_id, max_retries, sleep_time):
             print(f"Failed to join the session. Error: {response['error']}")
             if "Session is already active" in response['error']:
                 return 0
-            time.sleep(sleep_time)
+            time.sleep(retry_delay)
             retries += 1
     return 0
 
-def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int, sleep_time: int):
+def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int, retry_delay: int):
     retries = 0
     while retries < max_retries:
-        flag = get_specific_variable_flag(SERVER_URL, SESSION_ID, var_send)
+        flag = get_variable_flag(SERVER_URL, SESSION_ID, var_send)
         print(f"Flag status: {flag}")
 
         if flag == 0:  # Check if the flag indicates readiness to send
@@ -98,7 +98,7 @@ def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int
         else:
             print("Flag is not set for sending, retrying...")
         
-        time.sleep(sleep_time)  # Wait before retrying
+        time.sleep(retry_delay)  # Wait before retrying
         retries += 1  # Increment the retry count
 
         if retries >= max_retries:
@@ -107,29 +107,29 @@ def send_data_with_retries(var_send: int, arr_send: np.ndarray, max_retries: int
 
     return 0  # Ensure a return value if the loop exits normally
 
-def check_data_availability_with_retries(var_id, max_retries, sleep_time):
+def check_data_availability_with_retries(var_id, max_retries, retry_delay):
     retries = 0
     while retries < max_retries:
-        flag_status = get_specific_variable_flag(SERVER_URL, SESSION_ID, var_id)
+        flag_status = get_variable_flag(SERVER_URL, SESSION_ID, var_id)
         if flag_status == 1:
             print(f"Data is available for session {SESSION_ID}, variable {var_id}.")
             return 1
         else:
             print(f"Data not available for session {SESSION_ID}, variable {var_id}, retrying...")
-            time.sleep(sleep_time)
+            time.sleep(retry_delay)
             retries += 1
     
     print(f"Failed to find available data for session {SESSION_ID}, variable {var_id} after {max_retries} retries.")
     return 0
 
-def receive_data_with_retries(var_receive, max_retries, sleep_time):
+def receive_data_with_retries(var_receive, max_retries, retry_delay):
     """
     Continuously attempts to receive data until successful or until the maximum number of retries is reached.
 
     Parameters:
         var_receive (int): The variable ID for which data is expected.
         max_retries (int): Maximum number of attempts to fetch the data.
-        sleep_time (int): Seconds to wait between retries.
+        retry_delay (int): Seconds to wait between retries.
     
     Returns:
         tuple:
@@ -146,7 +146,7 @@ def receive_data_with_retries(var_receive, max_retries, sleep_time):
             return (status_receive, data_array)
         else:
             print("Failed to fetch data, retrying...")
-            time.sleep(sleep_time)
+            time.sleep(retry_delay)
             retries += 1
 
     print(f"Failed to receive data for var_id {var_receive} after {max_retries} attempts.")
@@ -158,48 +158,4 @@ def end_session_now(user_id: int):
         return
         
     end_session(SERVER_URL, SESSION_ID, user_id)
-
-
-
-# Unused/ Extra High level endpoints provided for interacting with the server
-
-# def join_session(invitee_id):
-#     if not SERVER_URL_SET:
-#         print("Error: Server URL not set. Please set a valid server URL before joining a session.")
-#         return
-
-#     join_session(SERVER_URL, SESSION_ID, invitee_id)
-
-
-# def check_all_session_availability():
-#     if not SERVER_URL_SET:
-#         print("Error: Server URL not set. Please set a valid server URL before checking session statuses.")
-#         return
-
-#     print_all_session_statuses(SERVER_URL)
-
-
-# def check_specific_session_variable_flags(session_id: List[int]):
-#     if not SERVER_URL_SET:
-#         print("Error: Server URL not set. Please set a valid server URL before checking variable flags.")
-#         return
-
-#     if len(session_id) != 5:
-#         print("Error: Invalid session ID array size.")
-#         return
-
-#     print_all_variable_flags(SERVER_URL, session_id)
-
-
-# def get_specific_variable_size(session_ids: List[int], var_id: int):
-#     if not SERVER_URL_SET:
-#         print("Error: Server URL not set. Please set a valid server URL before retrieving variable sizes.")
-#         return
-
-#     var_size = get_variable_size(SERVER_URL, session_ids, var_id)
-#     if var_size < 0:
-#         print(f"Error: Unable to get variable size for ID {var_id}")
-#         return -1  # Indicating an error
-#     return var_size  # Indicating success
-
 

@@ -24,12 +24,12 @@ module low_level_fortran_interface
             integer(c_int), value :: no_of_output_variables
         end subroutine create_session
 
-        function get_specific_session_status(url, session_id) bind(C, name="get_specific_session_status")
+        function get_session_status(url, session_id) bind(C, name="get_session_status")
             import :: c_char, c_int
             character(kind=c_char), intent(in) :: url(*)
             integer(c_int), intent(in) :: session_id(*)
-            integer(c_int) :: get_specific_session_status  ! Return type changed to integer
-        end function get_specific_session_status
+            integer(c_int) :: get_session_status  ! Return type changed to integer
+        end function get_session_status
 
         ! Joins an existing session on the server
         function join_session(url, session_id, invitee_id) bind(C, name="join_session")
@@ -52,22 +52,22 @@ module low_level_fortran_interface
         end function send_data
         
         ! Gets the flag status for a specific variable
-        function get_specific_variable_flag(base_url, session_id, var_id) bind(C)
+        function get_variable_flag(base_url, session_id, var_id) bind(C)
             import :: c_char, c_int
             character(kind=c_char), intent(in) :: base_url(*)
             integer(c_int), intent(in) :: session_id(*)
             integer(c_int), value :: var_id
-            integer(c_int) :: get_specific_variable_flag
-        end function get_specific_variable_flag
+            integer(c_int) :: get_variable_flag
+        end function get_variable_flag
     
         ! Gets the size of a variable from the server
-        function get_specific_variable_size(base_url, session_id, var_id) bind(C)
+        function get_variable_size(base_url, session_id, var_id) bind(C)
             import :: c_char, c_int
             character(kind=c_char), intent(in) :: base_url(*)
             integer(c_int), intent(in) :: session_id(*)
             integer(c_int), value :: var_id
-            integer(c_int) :: get_specific_variable_size
-        end function get_specific_variable_size
+            integer(c_int) :: get_variable_size
+        end function get_variable_size
 
         ! Receives data from the server
         function receive_data(url, session_id, var_id, arr, n) bind(C)
@@ -91,17 +91,3 @@ module low_level_fortran_interface
     end interface
 
 end module low_level_fortran_interface
-
-!Unused/ Extra High level endpoints provided for interacting with the server
-        ! ! Retrieves and print the status of all sessions from the server
-        ! subroutine print_all_session_statuses(url) bind(C)
-        !     import :: c_char
-        !     character(kind=c_char), intent(in) :: url(*)
-        ! end subroutine print_all_session_statuses
-
-        ! ! Retrieves and print flag status for a given session
-        ! subroutine print_all_variable_flags(base_url, session_id) bind(C)
-        !     import :: c_char, c_int
-        !     character(kind=c_char), intent(in) :: base_url(*)
-        !     integer(c_int), intent(in) :: session_id(*)
-        ! end subroutine print_all_variable_flags
