@@ -246,25 +246,3 @@ if __name__ == '__main__':
         uvicorn.run(app, host='0.0.0.0', port=8000)
 
     main()
-
-
-# Unused/ Extra High level endpoints provided for interacting with the server
-
-# @app.get("/print_all_session_statuses")
-# async def print_all_session_statuses():
-#     """ Print list of all current sessions and their current status """
-#     with session_lock:
-#         session_statuses = {session_id: session.get('status') for session_id, session in sessions.items()}
-#         return session_statuses
-
-# @app.get("/print_all_variable_flags")
-# async def print_all_variable_flags(session_id: str):
-#     """
-#     Retrieve the flag status of all variables in the session.
-#     """
-#     with session_lock:
-#         if session_id in sessions:
-#             flags = {str(key): value for key, value in sessions[session_id]['flags'].items()}
-#             return flags
-#         else:
-#             raise HTTPException(status_code=404, detail="Session not found")

@@ -29,7 +29,6 @@ make
 If the compilation is successful, run the E3SM test executable:
 
 ```bash
-cd bin
 ./e3sm_test
 ```
 

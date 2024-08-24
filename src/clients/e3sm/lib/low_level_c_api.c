@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_URL_SIZE 2048
+
 /**
  * Function to create a session on the server by making a POST request with JSON data.
  * @param base_url Base URL of the server
@@ -25,7 +27,7 @@ void create_session(const char* base_url, int source_model_ID, int destination_m
     CURL *curl;
     CURLcode res;
 
-    char full_url[2048]; // Buffer to construct the full URL
+    char full_url[MAX_URL_SIZE]; // Buffer to construct the full URL
     char postFields[4096]; // Buffer for JSON payload
     char arrays[1024]; // Buffer for temporary storage of array strings
 
@@ -100,7 +102,7 @@ int join_session(const char *base_url, const int session_id[], int invitee_id) {
     CURL *curl;
     CURLcode res;
     char postFields[1024];
-    char full_url[2048];
+    char full_url[MAX_URL_SIZE];
     char session_id_str[256];
     char invitee_id_str[32];
 
@@ -155,55 +157,6 @@ int join_session(const char *base_url, const int session_id[], int invitee_id) {
     return 0;  // Failure
 }
 
-
-
-/**
- * Callback function for printing data received from a CURL request.
- * This function will be called by libcurl as soon as there is data received that needs to be processed.
- * @param contents Data received from the server
- * @param size Size of the data element received
- * @param nmemb Number of data elements received
- * @param userp Pointer to user data (unused)
- * @return Number of bytes actually handled. If different from the number provided, it'll signal an error to libcurl.
- */
-size_t print_response_data(void *contents, size_t size, size_t nmemb, void *userp) {
-    size_t real_size = size * nmemb;  // Calculate the real size of the data
-    printf("%s", (char*)contents);  // Print the data to stdout
-    return real_size;  // Must return the full size to indicate success
-}
-
-/**
- * Function to make a GET request to retrieve all session statuses from the server.
- * @param base_url Base URL of the server
- */
-void print_all_session_statuses(const char* base_url) {
-    CURL *curl;  // CURL handle
-    CURLcode res;  // Result of CURL operations
-    char full_url[2048];  // Buffer to store the full URL
-
-    // Construct the full URL for retrieving session statuses
-    snprintf(full_url, sizeof(full_url), "%s/print_all_session_statuses", base_url);
-
-    // Initialize CURL
-    curl_global_init(CURL_GLOBAL_ALL);
-    curl = curl_easy_init();
-    if (curl) {
-        // Set CURL options for the GET request
-        curl_easy_setopt(curl, CURLOPT_URL, full_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, print_response_data); // Set the callback for data reception
-
-        // Perform the GET request
-        res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-        }
-
-        // Clean up CURL resources
-        curl_easy_cleanup(curl);
-    }
-    curl_global_cleanup();  // Global CURL cleanup
-}
-
 /**
  * Constructs a query string from an array of session IDs to be used in URL queries.
  * The function assumes the array always contains exactly 5 elements.
@@ -225,57 +178,6 @@ void format_session_id_query(char *output, const int session_id[]) {
             strcat(output, ",");  // Append a comma after the ID except for the last one
         }
     }
-}
-
-/**
- * Callback function for handling data received from CURL operations. It prints the data to standard output.
- * @param contents Pointer to the data received.
- * @param size Size of one data element.
- * @param nmemb Number of elements received.
- * @param userp User pointer (unused).
- * @return The number of bytes processed, which should match the number received to signify success.
- */
-size_t print_all_variable_flags_callback(void *contents, size_t size, size_t nmemb, void *userp) {
-    size_t real_size = size * nmemb;  // Calculate the total size of data received
-    printf("%s", (char*)contents);  // Print the received data to stdout
-    return real_size;  // Return the total size processed
-}
-
-/**
- * Retrieves flag statuses associated with given session IDs by making a GET request to a specified URL.
- * @param base_url Base URL of the API.
- * @param session_id Array of integers representing session IDs.
- */
-void print_all_variable_flags(const char* base_url, const int session_id[]) {
-    CURL *curl;  // CURL handle
-    CURLcode res;  // CURL operation result
-    char full_url[2048];  // Buffer to store the constructed URL
-    char query_param[256];  // Buffer for session_id query part
-
-    // Generate the session_id query string from the array
-    format_session_id_query(query_param, session_id);
-
-    // Construct the full URL by appending the session_id query string to the base URL
-    snprintf(full_url, sizeof(full_url), "%s/print_all_variable_flags?%s", base_url, query_param);
-
-    // Initialize CURL
-    curl_global_init(CURL_GLOBAL_ALL);
-    curl = curl_easy_init();
-    if (curl) {
-        // Set CURL options for the GET request
-        curl_easy_setopt(curl, CURLOPT_URL, full_url);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, print_all_variable_flags_callback);  // Set the callback function to print the response
-
-        // Execute the GET request
-        res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));  // Log errors if the request failed
-        }
-
-        // Clean up CURL resources
-        curl_easy_cleanup(curl);
-    }
-    curl_global_cleanup();  // Perform global cleanup for CURL
 }
 
 struct memory {
@@ -342,10 +244,6 @@ int get_session_status(const char *base_url, const int session_id[]) {
     free(chunk.response);
     return 0;  // Return 0 if there was an error
 }
-
-
-
-
 
 
 /**
@@ -428,14 +326,17 @@ int get_variable_flag(const char* base_url, const int session_id[], int var_id) 
  */
 size_t get_variable_size_callback(char* ptr, size_t size, size_t nmemb, void* userdata) {
     size_t real_size = size * nmemb;  // Calculate total data size
-    char* found = strstr(ptr, "\"size\":");  // Search for the "size" key in the response
+    const char* key = "\"size\":";  // Define the key to search for
+    char* found = strstr(ptr, key);  // Search for the "size" key in the response
+
     if (found) {
-        found += 7;  // Move past the key to the value
+        found += strlen(key);  // Dynamically calculate the offset past the key to the value
         int extracted_size = atoi(found);  // Convert the string to an integer
         *(int*)userdata = extracted_size;  // Store the result in the provided userdata
     }
     return real_size;  // Return the number of bytes processed
 }
+
 
 /**
  * Fetches the size of a specific variable from the server using HTTP GET.
@@ -447,7 +348,7 @@ size_t get_variable_size_callback(char* ptr, size_t size, size_t nmemb, void* us
 int get_variable_size(const char* base_url, const int session_id[], int var_id) {
     CURL *curl;
     CURLcode res;
-    char full_url[2048];
+    char full_url[MAX_URL_SIZE];
     char session_query[256];  // Buffer for session_id query part
     int size = -1;  // Default to -1 to indicate failure or not found
 
@@ -522,7 +423,7 @@ int send_data(const char* base_url, const int session_id[], int var_id, const do
     CURL *curl;
     CURLcode res;
     struct curl_slist *headers = NULL;
-    char full_url[2048];  // Buffer for full URL
+    char full_url[MAX_URL_SIZE];  // Buffer for full URL
     char sessionHeader[256];  // Buffer for formatted session ID header
     char varHeader[256];  // Buffer for variable ID header
 
@@ -679,7 +580,7 @@ int receive_data(const char* base_url, const int session_id[], int var_id, doubl
 void end_session(const char* base_url, const int session_id[], int user_id) {
     CURL *curl;
     CURLcode res;
-    char full_url[2048];
+    char full_url[MAX_URL_SIZE];
     char session_id_str[256];
     char postFields[1024];
     char user_id_str[32];
