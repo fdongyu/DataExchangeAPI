@@ -105,7 +105,7 @@ This will execute the compiled binary and engage in the data exchange process wi
 ## Session Management : Primary API Endpoints
 Both clients will interact with the data exchange server, which handles sessions, flags, and data transmission. Use the following endpoints to manage and monitor sessions:
 
-- `/create_session/{client_id}`: Initiates a new session.
+- `/create_session`: Initiates a new session.
 - `/join_session`: Joins an existing session.
 - `/print_all_session_statuses`: Prints list of all current sessions and their statuses.
 - `/print_all_variable_flags`: Retrieves the flag status of all variables in a session.
@@ -115,4 +115,14 @@ Both clients will interact with the data exchange server, which handles sessions
 - `/receive_data`: Receives binary data for a specific variable.
 - `/end_session`: Ends a session.
 
+## Libraries and their usage
 
+- **FastAPI**: Used to create and handle the web server and API endpoints.
+- **HTTPException, Request, Response, Header**: FastAPI dependencies for managing HTTP specifics.
+- **Pydantic**: Utilized for data validation through BaseModel.
+- **List, Optional**: Typing modules for specifying type hints.
+- **uvicorn**: ASGI server for running FastAPI.
+- **struct**: Module for handling binary data through packing and unpacking.
+- **threading**: Provides support for concurrent operations.
+- **asyncio**: Manages asynchronous operations.
+- **warnings**: Used to control warning messages.
