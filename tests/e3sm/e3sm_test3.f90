@@ -17,7 +17,7 @@ program e3sm_test_iterations
 
 
     ! Set the server URL at runtime
-    call set_server_url("http://128.55.64.47:8000")
+    call set_server_url("http://127.0.0.1:8000")
 
     ! User sets values directly
     sd%source_model_ID = 2001

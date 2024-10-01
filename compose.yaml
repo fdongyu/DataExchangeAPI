@@ -1,0 +1,24 @@
+
+version: "3.7"
+
+services:
+  server:
+    container_name: server
+    build:
+      context: .
+    network_mode: host
+  caddy:
+    image: caddy:alpine
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    network_mode: host
+    depends_on:
+      - server
+volumes:
+  caddy_data:
+  caddy_config:
+  

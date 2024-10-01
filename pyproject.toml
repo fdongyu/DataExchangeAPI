@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "ModelDataExchange"
+version = "0.1.0"
+description = "This repository contains the codebase for a data exchange service designed to facilitate communication between the Earth System Model (E3SM) and the Cyberwater client. It also includes a Python-based middleman server to manage the data exchange."
+authors = ["Seth Wolfgang <wolfgangseth@gmail.com>",        
+            "Ayush Manojkumar Lodha",
+            "Yao Liang",
+            "Xu Liang",
+            "Feng Dongyu",
+            "Fengguang Song"]
+readme = "README.md"
+
+packages = [{ include = "cyberwater" , from = "src/clients/", to = "ModelDataExchange/clients" },
+            { include = "server" , from = "src/", to = "ModelDataExchange/" },
+            { include = "data_classes.py", from="src/", to="ModelDataExchange/"},
+            { include = "cw_cpl_indices.py", from="src/", to="ModelDataExchange/"},
+            { include = "tests", to = "ModelDataExchange/tests" },
+            { include = "benchmark", to = "ModelDataExchange/benchmark"}]
+
+[tool.poetry.dependencies]
+python     = ">3.9"
+fastapi    = "0.110.1"
+uvicorn    = "0.29.0"
+pydantic   = "2.7.0"
+numpy      = "1.22.0"
+httpx      = "0.27.2"
+requests   = "2.26.0"
+pytest     = "7.4.2"
+pytest-cov = "5.0.0" 
+
+[tool.pytest.ini_options]
+testpaths = "tests/tests.py"
+addopts = "--cov=ModelDataExchange --cov-report=lcov:build/lcov.info --cov-report term-missing --cache-clear -p no:cacheprovider"
+
+
+[tool.coverage.run]
+include = ["/src/*/*.py"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

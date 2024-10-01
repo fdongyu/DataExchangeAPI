@@ -15,7 +15,7 @@ program test_start_session
     sd%output_variables_size = [50]
 
     ! Set the server URL
-    call set_server_url("http://128.55.64.33:8000")
+    call set_server_url("http://127.0.0.1:8000")
 
     ! Test 1: Start Session Normally
     call start_session(sd)

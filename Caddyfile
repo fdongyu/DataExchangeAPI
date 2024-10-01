@@ -1,0 +1,18 @@
+# Change this to your domain (URL) or public IP
+dataexchange.cis240199.projects.jetstream-cloud.org
+
+# Change this to the IP address the server is running.
+# If this is in a docker container and you're not using the 
+# host network, switch this to the name of the container.
+#
+# if you have `container_name: server` you will write
+# `reverse_proxy server:port`
+#
+reverse_proxy 0.0.0.0:8000
+
+# Can comment this out
+log {
+	output stdout
+}
+
+

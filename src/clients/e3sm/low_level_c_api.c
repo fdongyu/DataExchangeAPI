@@ -577,7 +577,7 @@ int receive_data(const char* base_url, const int session_id[], int var_id, doubl
  * @param session_id Array containing session identifiers.
  * @param user_id User identifier, used to authenticate the request and identify the user within the session context.
  */
-void end_session(const char* base_url, const int session_id[], int user_id) {
+void end_session(const char* base_url, const int session_id[], char* user_id) {
     CURL *curl;
     CURLcode res;
     char full_url[MAX_URL_SIZE];
@@ -595,7 +595,7 @@ void end_session(const char* base_url, const int session_id[], int user_id) {
         if (i < 4) strcat(session_id_str, ",");
     }
 
-    snprintf(user_id_str, sizeof(user_id_str), "%d", user_id);
+    snprintf(user_id_str, sizeof(user_id_str), "%s", user_id);
     snprintf(postFields, sizeof(postFields), "{\"session_id\": \"%s\", \"user_id\": %s}", session_id_str, user_id_str);
 
     curl_global_init(CURL_GLOBAL_ALL);

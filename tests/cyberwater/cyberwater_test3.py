@@ -1,4 +1,5 @@
-from clients.cyberwater.lib.high_level_api import *
+from src.clients.cyberwater.high_level_api import * 
+
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 import time
@@ -7,7 +8,7 @@ import time
 urllib3.disable_warnings(InsecureRequestWarning)
 
 # Setting up the server and session parameters
-set_server_url("http://128.55.64.47:8000")
+set_server_url("http://0.0.0.0:8000")
 session_id = [2001, 2005, 35, 38, 1]
 set_session_id(session_id)
 session_data = SessionData(

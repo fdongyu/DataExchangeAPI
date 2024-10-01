@@ -1,4 +1,4 @@
-from clients.cyberwater.lib.high_level_api import *
+from src.clients.cyberwater.high_level_api import * 
 
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
@@ -7,7 +7,7 @@ from urllib3.exceptions import InsecureRequestWarning
 urllib3.disable_warnings(InsecureRequestWarning)
 
 # Usage of the module functions
-set_server_url("http://128.55.64.47:8000")
+set_server_url("http://0.0.0.0:8000")
 session_id = [2001,2005,35,38,1]
 set_session_id(session_id)
 session_data = SessionData(
@@ -23,23 +23,23 @@ session_data = SessionData(
 start_session(session_data)
 
 # # Check the session status first
-# session_status = retrieve_session_status(session_id)
+session_status = retrieve_session_status(session_id)
 
-# if session_status is None:
-#     print("Failed to get session status.")
-# elif session_status == 1:
-#     print("Session status is 'created'")
-#     join_status = join_session_with_retries(session_id, invitee_id=38, max_retries=5, retry_delay=5)
-#     if join_status == 0:
-#         print("Not able to join properly.")
-#     elif join_status == 1:
-#         print("Joined the session successfully.")
-# elif session_status == 2:
-#     print("Session status is 'active'")
-# elif session_status == 3:
-#     print("Session status is 'partial end'")
-# else:
-#     print(f"Current status of session: {session_status}")
+if session_status is None:
+    print("Failed to get session status.")
+elif session_status == 1:
+    print("Session status is 'created'")
+    join_status = join_session_with_retries(session_id, invitee_id=38, max_retries=5, retry_delay=5)
+    if join_status == 0:
+        print("Not able to join properly.")
+    elif join_status == 1:
+        print("Joined the session successfully.")
+elif session_status == 2:
+    print("Session status is 'active'")
+elif session_status == 3:
+    print("Session status is 'partial end'")
+else:
+    print(f"Current status of session: {session_status}")
 
 print("------ Sleeping for 10 seconds ------")
 time.sleep(10)
