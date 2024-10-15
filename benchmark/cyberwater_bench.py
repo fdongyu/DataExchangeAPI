@@ -16,8 +16,8 @@ from ModelDataExchange.cw_cpl_indices import Vars
 
 
 ITERATIONS = 10
-URL = "http://127.0.0.1:8000"
-# URL = "https://dataexchange.cis240199.projects.jetstream-cloud.org"
+# URL = "http://127.0.0.1:8000"
+URL = "https://dataexchange.cis240199.projects.jetstream-cloud.org"
 SESSION_ID = None
 INVITEE_ID = 38
 
@@ -78,7 +78,7 @@ def run_get_command(command: str, params: dict):
     requests.get(f"{URL}/{command}", params=params)
 
 
-def prepare_session(vars: list[int], var_sizes: list[int]):
+def prepare_session(vars: int, var_sizes: list[int]):
     session_data = prepare_user(vars, var_sizes)
     
     set_server_url(URL)
@@ -361,13 +361,14 @@ def run_benchmarks():
     global INVITEE_ID
     # "name, function, SessionData (size of data)
 
-    send_data_users: list[SessionData] = prepare_user(1, [1, 10, 100, 1000, 10000, 100000, 1000000])
+    send_data_users: list[SessionData] = prepare_user(1, [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000])
     default_user = prepare_user(1, [1])
     user_10 = prepare_user(10, [1])
     user_100 = prepare_user(100, [1])
     user_1000 = prepare_user(1000, [1])
     user_10000 = prepare_user(10000, [1])
     user_100000 = prepare_user(100000, [1])
+    user_1000000 = prepare_user(1000000, [1])
 
 
 
@@ -378,12 +379,14 @@ def run_benchmarks():
         ("create_session-1000",   create_session_benchmark, user_1000),
         ("create_session-10000",  create_session_benchmark, user_10000),
         ("create_session-100000", create_session_benchmark, user_100000),
+        ("create_session-1000000", create_session_benchmark, user_1000000),
         ("join_session-1",      join_session_benchmark, default_user),
         ("join_session-10",     join_session_benchmark, user_10),
         ("join_session-100",    join_session_benchmark, user_100),
         ("join_session-1000",   join_session_benchmark, user_1000),
         ("join_session-10000",  join_session_benchmark, user_10000),
         ("join_session-100000", join_session_benchmark, user_100000),
+        ("join_session-1000000", join_session_benchmark, user_1000000),
         ("get_session_status-1",      get_session_status_benchmark, default_user),
         ("get_session_status-10",     get_session_status_benchmark, user_10),
         ("get_session_status-100",    get_session_status_benchmark, user_100),
@@ -396,18 +399,21 @@ def run_benchmarks():
         ("get_var_flag-1000",   get_var_flag_benchmark, user_1000),
         ("get_var_flag-10000",  get_var_flag_benchmark, user_10000),
         ("get_var_flag-100000", get_var_flag_benchmark, user_100000),
+        ("get_var_flag-1000000", get_var_flag_benchmark, user_1000000),
         ("get_var_size-1",      get_var_size_benchmark, default_user),
         ("get_var_size-10",     get_var_size_benchmark, user_10),
         ("get_var_size-100",    get_var_size_benchmark, user_100),
         ("get_var_size-1000",   get_var_size_benchmark, user_1000),
         ("get_var_size-10000",  get_var_size_benchmark, user_10000),
         ("get_var_size-100000", get_var_size_benchmark, user_100000),
+        ("get_var_size-1000000", get_var_size_benchmark, user_1000000),
         ("end_session-1",      end_session_benchmark, default_user),
         ("end_session-10",     end_session_benchmark, user_10),
         ("end_session-100",    end_session_benchmark, user_100),
         ("end_session-1000",   end_session_benchmark, user_1000),
         ("end_session-10000",  end_session_benchmark, user_10000),
         ("end_session-100000", end_session_benchmark, user_100000),
+        ("end_session-1000000", end_session_benchmark, user_1000000),
         ("send_data-1",       send_data_benchmark, send_data_users[0]),
         ("send_data-10",      send_data_benchmark, send_data_users[1]),
         ("send_data-100",     send_data_benchmark, send_data_users[2]),
@@ -415,13 +421,21 @@ def run_benchmarks():
         ("send_data-10000",   send_data_benchmark, send_data_users[4]),
         ("send_data-100000",  send_data_benchmark, send_data_users[5]),
         ("send_data-1000000", send_data_benchmark, send_data_users[6]),
+        ("send_data-10000000", send_data_benchmark, send_data_users[7]),
+        ("send_data-100000000", send_data_benchmark, send_data_users[8]),
+        ("send_data-1000000000", send_data_benchmark, send_data_users[9]),
+        ("send_data-10000000000", send_data_benchmark, send_data_users[10]),
         ("recv_data-1",       recv_data_benchmark, send_data_users[0]),
         ("recv_data-10",      recv_data_benchmark, send_data_users[1]),
         ("recv_data-100",     recv_data_benchmark, send_data_users[2]),
         ("recv_data-1000",    recv_data_benchmark, send_data_users[3]),
         ("recv_data-10000",   recv_data_benchmark, send_data_users[4]),
         ("recv_data-100000",  recv_data_benchmark, send_data_users[5]),
-        ("recv_data-1000000", recv_data_benchmark, send_data_users[6])
+        ("recv_data-1000000", recv_data_benchmark, send_data_users[6]),
+        ("recv_data-10000000", recv_data_benchmark, send_data_users[7]),
+        ("recv_data-100000000", recv_data_benchmark, send_data_users[8]),
+        ("recv_data-1000000000", recv_data_benchmark, send_data_users[9]),
+        ("recv_data-10000000000", recv_data_benchmark, send_data_users[10]),
         
     ]
 
@@ -430,6 +444,7 @@ def run_benchmarks():
     # Run benchmarks
     for benchmark in benchmarks:
         name, func, arg = benchmark
+        print("Running", name)
         results[name] = func(arg)
     
     # Statistical Analysis
@@ -461,7 +476,7 @@ def write_results(raw, stats):
     
     with open("raw_results.txt", "w") as file:
         for key in raw.keys():
-            file.write(f"{key}, {', '.join([str(x) for x in raw[key]])}\n")
+            file.write(f"{key}, {','.join([str(x) for x in raw[key]])}\n")
     
     with open("statistical_results.txt", "w") as file:
         file.write("name, mean, median, variance, std_dev, min, max, range\n")

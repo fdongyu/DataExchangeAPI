@@ -4,7 +4,7 @@ program e3sm_test
     use iso_c_binding, only: c_int, c_double, c_null_char
     implicit none
     type(session_data) :: sd
-    integer(c_int), dimension(5) :: id
+    type(SessionID) :: id
     real(c_double), dimension(50) :: arr_send
     integer :: var_to_send, send_status, loop_index
     real(c_double), dimension(:), allocatable :: arr_receive
@@ -13,9 +13,12 @@ program e3sm_test
     integer :: i  ! Declaration for the loop index
     integer :: join_status
     integer(c_int) :: session_status
+    character(len=1024) :: URL
 
+    URL = "https://dataexchange.cis240199.projects.jetstream-cloud.org"
     ! Set the server URL at runtime
-    call set_server_url("http://127.0.0.1:8000")
+    ! call set_server_url("http://127.0.0.1:8000")
+    call set_server_url(URL)
 
     ! User sets values directly
     sd%source_model_ID = 2001
@@ -28,7 +31,14 @@ program e3sm_test
     sd%output_variables_size = [50]
 
     ! Write the session_ID for the whole program
-    id = [2001, 2005, 35, 38, 1]
+    id = start_session(sd)
+
+    print *, "Source Model ID: ", id%source_model_id
+    print *, "Destination Model ID: ", id%destination_model_id
+    print *, "Initiator ID: ", id%initiator_id
+    print *, "Invitee ID: ", id%invitee_id
+    print *, "Session ID: ", id%instance_id
+
     call set_session_id(id)
 
     ! Join the session
@@ -45,6 +55,8 @@ program e3sm_test
     else
         print *, "Current status of session: ", session_status
     endif
+    ! Exit
+
 
     ! Send data to the server
     var_to_send = 4
@@ -54,11 +66,12 @@ program e3sm_test
     end do
     ! Call the function and capture the return status
     send_status = send_data_with_retries(var_to_send, arr_send, 5, 5)
-    print *, "Status of send operation:", send_status
-    print *, "------ Sleeping for 10 seconds ------"
-    call sleep(10)
 
-    receive_var_id = 1
+    print *, "Status of send operation:", send_status
+    print *, "------ Sleeping for 1 second ------"
+    call sleep(1)
+
+    receive_var_id = 4
     if (check_data_availability_with_retries(receive_var_id, 5, 5) == 1) then
         ! Proceed with data retrieval
         receive_var_size = retrieve_variable_size(id, receive_var_id)
@@ -90,8 +103,8 @@ program e3sm_test
     if (allocated(arr_receive)) then
         deallocate(arr_receive)
     endif
-    print *, "------ Sleeping for 10 seconds ------"
-    call sleep(10)
+    print *, "------ Sleeping for 1 second ------"
+    call sleep(1)
 
     ! End the session
     call end_session_now(sd%invitee_id)

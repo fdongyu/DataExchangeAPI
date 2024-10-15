@@ -1,11 +1,16 @@
 
-version: "3.7"
-
 services:
   server:
     container_name: server
     build:
       context: .
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: .
+        - action: rebuild
+          path: .
     network_mode: host
   caddy:
     image: caddy:alpine

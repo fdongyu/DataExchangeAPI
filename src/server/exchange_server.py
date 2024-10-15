@@ -1,6 +1,5 @@
-
-from fastapi import FastAPI, HTTPException, Header, Request, Response
 from typing import Optional
+from fastapi import FastAPI, HTTPException, Header, Request, Response
 from sys import argv
 
 from ModelDataExchange.data_classes import SessionData, JoinSessionData, SessionID, SessionStatus
@@ -22,7 +21,7 @@ session_lock = threading.Lock()
 @app.on_event("startup")
 async def startup_event():
     """ Start background tasks at server startup """
-    app.state.print_sessions_task = asyncio.create_task(print_sessions_every_n_seconds(n=10))
+    app.state.print_sessions_task = asyncio.create_task(print_sessions_every_n_seconds(n=1))
 
 
 @app.on_event("shutdown")
@@ -35,7 +34,7 @@ async def shutdown_event():
         print("Background task was cancelled")
 
 
-async def print_sessions_every_n_seconds(n=10):
+async def print_sessions_every_n_seconds(n=1):
     """ Periodically print the current sessions and their flags every `n` seconds """
     while True:
         with session_lock:
@@ -68,15 +67,13 @@ async def create_session(session_data: SessionData):
         #     session_id = f"{base_session_id},{i}"
         
         # Generate a unique session ID
-        session_id = None
-        while session_id is None or session_id in sessions:
-            session_id = SessionID(
-                source_model_id=session_data.source_model_id,
-                destination_model_id=session_data.destination_model_id,
-                initiator_id=session_data.initiator_id,
-                invitee_id=session_data.invitee_id,
-                client_id=str(uuid.uuid4())
-            )
+        session_id = SessionID(
+            source_model_id=session_data.source_model_id,
+            destination_model_id=session_data.destination_model_id,
+            initiator_id=session_data.initiator_id,
+            invitee_id=session_data.invitee_id,
+            client_id=str(uuid.uuid4())
+        )
 
         print(f"Creating session with ID: {session_id}")
         # Map variable IDs to their respective sizes
@@ -90,6 +87,8 @@ async def create_session(session_data: SessionData):
             'flags': {var: 0 for var in set(session_data.input_variables_id) | set(session_data.output_variables_id)},
             'client_vars': {session_data.initiator_id: list(session_data.input_variables_id)},
             'client_id': session_id.client_id,
+            'invitee_id': session_data.invitee_id,
+            'initiator_id': session_data.initiator_id,
             'end_requests': set(),
             'var_sizes': var_sizes
         }
@@ -98,7 +97,7 @@ async def create_session(session_data: SessionData):
     
 
 @app.get("/get_session_status")
-async def get_session_status(session_id: SessionID) -> int:
+async def get_session_status(session_id: str) -> int:
     """
     Retrieves the status of a specific session.
 
@@ -114,6 +113,8 @@ async def get_session_status(session_id: SessionID) -> int:
         SessionStatus.PARTIAL_END = 3
         SessionStatus.END = 4
     """
+
+    session_id = string_to_session_id(session_id) # type: ignore
     with session_lock:  # Assuming session_lock is a threading lock for thread-safe operations
         # Check if the session exists
         if session_id not in sessions:
@@ -132,14 +133,14 @@ async def join_session(data: JoinSessionData) -> dict:
     with session_lock:
         session_id = data.session_id
         joining_invitee_id = data.invitee_id
+        
 
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found")
-
-        if sessions[session_id].get('status') == SessionStatus.ACTIVE:
+        elif sessions[session_id].get('status') == SessionStatus.ACTIVE:
             raise HTTPException(status_code=400, detail="Session is already active")
-
-        if joining_invitee_id != sessions[session_id]['invitee_id']:
+        elif joining_invitee_id != sessions[session_id]['invitee_id']:
+            print(f"Invitee ID does not match. Expected: {sessions[session_id]['invitee_id']}, Got: {joining_invitee_id}")
             raise HTTPException(status_code=403, detail="Invitee ID does not match")
 
         # Assign variables not used by the initiator to the joining client
@@ -159,10 +160,12 @@ async def send_data(request: Request, session_id: Optional[str] = Header(None), 
     """
     Receive binary data for a specific variable in a session.
     """
-    session_id = string_to_session_id(session_id)
+    session_id = string_to_session_id(session_id) # type: ignore
 
     if session_id is None or var_id is None:
         raise HTTPException(status_code=400, detail="Session-ID or Var-ID header missing")
+    elif sessions[session_id]['flags'][var_id] == 1:
+        raise HTTPException(status_code=400, detail="Data already present for variable ID " + str(var_id))  
 
     binary_data = await request.body()
     # `binary_data` is a bytes object that contains packed binary data, 
@@ -188,8 +191,8 @@ async def get_variable_flag(session_id: str, var_id: int):
     """
     Get the flag status for a specific variable in the session.
     """
-
-    session_id = string_to_session_id(session_id)
+ 
+    session_id = string_to_session_id(session_id) # type: ignore
 
     with session_lock:
         if session_id in sessions and var_id in sessions[session_id]['flags']:
@@ -205,7 +208,7 @@ async def get_variable_size(session_id: str, var_id: int):
     Retrieve the size of a specific variable in the session.
     """
 
-    session_id = string_to_session_id(session_id)
+    session_id = string_to_session_id(session_id) # type: ignore
 
     with session_lock:
         if session_id in sessions and 'var_sizes' in sessions[session_id]:
@@ -219,19 +222,32 @@ async def get_variable_size(session_id: str, var_id: int):
 
 
 @app.get("/receive_data")
-async def receive_data(session_id: str, var_id: int, delay: int = 0):
+async def receive_data(session_id: str, var_id: int):
     """
     Send binary data for a specific variable in a session.
+
+    Parameters:
+        session_id (str): The session ID.
+        var_id (int): The variable ID.
+        delay (int): The delay in seconds before sending the data. Default is 0.
+
+    Returns:
+        Response: The binary data as a response object.
+
+    Raises:
+        HTTPException: If the session or variable is not found.
     """
 
-    session_id = string_to_session_id(session_id)
+    session_id = string_to_session_id(session_id) # type: ignore
 
     with session_lock:
         if session_id in sessions and var_id in sessions[session_id]['data']:
             data = sessions[session_id]['data'][var_id]
             if data is not None:
+                
                 binary_data = struct.pack('<' + 'd' * len(data), *data)
                 sessions[session_id]['flags'][var_id] = 0  # Reset the flag after data is sent
+
                 return Response(content=binary_data, media_type='application/octet-stream')
             else:
                 raise HTTPException(status_code=404, detail="Data not available for variable ID " + str(var_id))
@@ -248,7 +264,7 @@ async def end_session(data: SessionID):
 
         session = sessions[data]
         if data.client_id not in session['client_id']:
-            raise HTTPException(status_code=404, detail="User not part of the session")
+            raise HTTPException(status_code=400, detail="User not part of the session")
 
         session['end_requests'].add(data.client_id)
 
@@ -262,7 +278,7 @@ async def end_session(data: SessionID):
                 vars_to_clear = session['client_vars'][data.invitee_id]
             
             for var in vars_to_clear:
-                print ("Variable Clearing:", var)
+                # print ("Variable Clearing:", var)
                 if var in session['data']:
                     session['data'][var] = None
                     session['flags'][var] = 0
@@ -274,7 +290,20 @@ async def end_session(data: SessionID):
             return {"status": SessionStatus.END, "session_id": data}
 
 
-def string_to_session_id(data: str) -> SessionID:
+def string_to_session_id(data: str | SessionID) -> SessionID:
+
+    """
+    Convert a string to a SessionID object.
+
+    Parameters:
+        data (str): The string to convert.
+
+    Returns:
+        SessionID: The SessionID object.
+    """
+    
+    if isinstance(data, SessionID):
+        return data
     
     session_id_str = data.split(',')
 

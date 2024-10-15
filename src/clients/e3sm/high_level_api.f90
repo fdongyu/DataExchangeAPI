@@ -4,9 +4,8 @@ module high_level_api
   implicit none
 
   character(len=256) :: server_url = ""  ! Dynamic server URL
-  integer(c_int), dimension(5) :: session_id
   integer(c_int) :: invitee_id
-  ! [source_model_ID, destination_model_ID, initiator_id, invitee_id, unique_counter]
+  type(SessionID) :: session_id
   integer :: var_send  ! Global variable ID for sending data
   integer :: var_receive  ! Global variable ID for receiving data
   logical :: server_url_set = .false.    ! Flag to check if server URL has been set
@@ -21,6 +20,8 @@ module high_level_api
     integer, dimension(:), allocatable :: output_variables_ID
     integer, dimension(:), allocatable :: output_variables_size
   end type session_data
+
+
 
 contains
 
@@ -39,29 +40,40 @@ contains
   !===============================================================================
 
   subroutine set_session_id(id)
-    integer(c_int), dimension(5), intent(in) :: id
+    type(SessionID), intent(in) :: id
     session_id = id
   end subroutine set_session_id
   
   !===============================================================================
 
-  subroutine start_session(sd)
+  function start_session(sd) result(local_session_id)
+    
     type(session_data), intent(inout) :: sd
+    type(SessionID) :: local_session_id
+
+    ! Check if the server URL is set
+    if (.not. server_url_set) then
+        print *, "Error: Server URL not set."
+        local_session_id = SessionID(source_model_ID=0, destination_model_ID=0, &
+                                initiator_id=0, invitee_id=0, instance_id="")
+        return
+    endif
 
     ! Create a session with the server using the data from 'sd'
     call create_session(trim(server_url)// C_NULL_CHAR, sd%source_model_ID, sd%destination_model_ID, &
                           sd%initiator_id, sd%invitee_id, sd%input_variables_ID, &
                           sd%input_variables_size, size(sd%input_variables_ID), &
                           sd%output_variables_ID, sd%output_variables_size, &
-                          size(sd%output_variables_ID))
+                          size(sd%output_variables_ID),  local_session_id )
+
     ! No cleanup needed here as 'sd' is managed by the calling program
-  end subroutine start_session
+  end function start_session
 
   !===============================================================================
-  function retrieve_session_status(session_id) result(status_int)
+  function retrieve_session_status(local_session_id) result(status_int)
     use iso_c_binding, only: c_int, c_char, c_null_char
     implicit none
-    integer(c_int), dimension(*), intent(in) :: session_id
+    type(SessionID), intent(in) :: local_session_id
     integer(c_int) :: status_int
 
     ! Ensure the server URL is set
@@ -72,7 +84,7 @@ contains
     endif
 
     ! Call the low-level API function and get the status as an integer
-    status_int = get_session_status(trim(server_url)//c_null_char, session_id)
+    status_int = get_session_status(trim(server_url)//c_null_char, local_session_id)
 
     if (status_int == 0) then
         print *, "Failed to retrieve session status."
@@ -80,10 +92,10 @@ contains
   end function retrieve_session_status
 
   !===============================================================================
-  function join_session_with_retries(session_id, invitee_id, max_retries, retry_delay) result(join_status)
+  function join_session_with_retries(local_session_id, invitee_id, max_retries, retry_delay) result(join_status)
     use iso_c_binding, only: c_int, c_char, c_null_char
     implicit none
-    integer(c_int), intent(in) :: session_id(*)
+    type(SessionID), intent(in) :: local_session_id
     integer(c_int), intent(in) :: invitee_id, max_retries, retry_delay
     integer(c_int) :: join_status
     integer :: retries
@@ -100,7 +112,7 @@ contains
 
     do while (retries < max_retries .and. join_status == 0)
         ! Call the low-level API function to attempt to join the session
-        join_status = join_session(trim(server_url)//c_null_char, session_id, invitee_id)
+        join_status = join_session(trim(server_url)//c_null_char, local_session_id, invitee_id)
 
         if (join_status == 1) then
             print *, "Joined the session successfully."
@@ -121,7 +133,8 @@ contains
 
   function send_data_with_retries(var_send, arr_send, max_retries, retry_delay) result(status_send)
       use low_level_fortran_interface    
-      use iso_c_binding, only: c_double 
+      use iso_c_binding, only: c_double
+      
       implicit none
 
       integer, intent(in) :: var_send, max_retries, retry_delay
@@ -203,7 +216,7 @@ contains
   end function check_data_availability_with_retries
   !===============================================================================
   function retrieve_variable_size(session_ids, var_id) result(var_size)
-    integer, dimension(:), intent(in) :: session_ids
+    type(SessionID), intent(in) :: session_ids
     integer, intent(in) :: var_id
     integer :: var_size
 
