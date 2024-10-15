@@ -32,7 +32,7 @@ build/**
 *.sql
 *.sqlite
 *.coverage 
-*.txt
+
 
 # OS generated files #
 ######################
